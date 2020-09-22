@@ -17,7 +17,7 @@
 #include <stdexcept>
 #include <string>
 
-#include <GL/gl.h>
+#include <glew.h>
 
 struct OpenGLContext {
     void resize(int width, int height) {

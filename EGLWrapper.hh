@@ -53,7 +53,6 @@ struct EGLWrapper : public OpenGLContext {
 
 private:
     virtual void m_makeCurrent() override {
-        std::cout << "m_makeCurrent called" << std::endl;
         eglMakeCurrent(m_display, m_surf, m_surf, m_ctx);
         std::cout << glGetString(GL_VERSION) << std::endl;
     }
@@ -63,12 +62,11 @@ private:
         if (m_surf != nullptr) { eglDestroySurface(m_display, m_surf); m_surf = nullptr; }
     }
 
-    virtual void m_readImage() {
+    virtual void m_readImage() override {
         glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, m_buffer.data());
     }
 
     virtual void m_resizeImpl(int width, int height) override {
-        std::cout << "m_resizeImpl called " << width << "x" << height << std::endl;
         m_destroy_size_specific();
 
         static const EGLint pbufferAttribs[] = {

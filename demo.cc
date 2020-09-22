@@ -3,7 +3,8 @@
 
 #include <stdexcept>
 // #include "OSMesaWrapper.hh"
-#include "EGLWrapper.hh"
+// #include "EGLWrapper.hh"
+#include "CGLWrapper.hh"
 
 int main(int argc, char *argv[])
 {
@@ -23,9 +24,8 @@ int main(int argc, char *argv[])
         height = atoi(argv[3]);
     }
 
-    // OSMesaWrapper ctx(width, height);
-    EGLWrapper ctx(width, height);
-    ctx.render([]() {
+    CGLWrapper ctx(width, height);
+    ctx.render([&]() {
         GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
         GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
         GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -41,12 +41,14 @@ int main(int argc, char *argv[])
         glEnable(GL_LIGHT0);
         glEnable(GL_DEPTH_TEST);
 
+        glViewport(0, 0, width, height);
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         glOrtho(-2.5, 2.5, -2.5, 2.5, -10.0, 10.0);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
 
+		glClearColor(0.0, 0.0, 1.0, 1.0);
         glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
         glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, green_mat );
@@ -64,8 +66,6 @@ int main(int argc, char *argv[])
     else {
         printf("Specify a filename if you want to make an image file\n");
     }
-
-    printf("all done\n");
 
     return 0;
 }
