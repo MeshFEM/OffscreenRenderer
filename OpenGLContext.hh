@@ -77,6 +77,14 @@ protected:
 
     virtual void m_readImage() { }
     virtual void m_resizeImpl(int /* width */, int /* height */) { }
+
+    void m_glewInit() {
+        auto status = glewInit();
+        if (status != GLEW_OK) {
+            std::cerr << "GLEW Error: " << glewGetErrorString(status) << std::endl;
+            throw std::runtime_error("glewInit failure");
+        }
+    }
 };
 
 #if USE_EGL

@@ -36,11 +36,7 @@ struct OSMesaWrapper : public OpenGLContext {
 
 		// Initialize GLEW entry points for our new context
         glewExperimental=GL_TRUE;
-        auto status = glewInit();
-        if (status != GLEW_OK) {
-            std::cerr << "GLEW Error: " << glewGetErrorString(status) << std::endl;
-            throw std::runtime_error("glewInit failure");
-        }
+        m_glewInit();
     }
 
     ~OSMesaWrapper() {

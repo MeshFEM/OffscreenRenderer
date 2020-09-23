@@ -27,7 +27,10 @@ int main(int argc, char *argv[])
     auto ctx = OpenGLContext::construct(width, height);
     ctx->makeCurrent();
 
-    // auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
+    auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
+    for (const auto &u : shader->getUniforms()) {
+        std::cout << "Uniform " << u.index << ": " << u.name << std::endl;
+    }
 
     ctx->render([&]() {
         glEnable(GL_DEPTH_TEST);

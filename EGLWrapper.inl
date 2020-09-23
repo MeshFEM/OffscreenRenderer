@@ -95,7 +95,7 @@ private:
         m_makeCurrent();
 
 		// Initialize GLEW entry points for our new context
-        glewInit();
+        m_glewInit();
     }
 
     EGLDisplay m_display = nullptr;

@@ -49,7 +49,7 @@ struct CGLWrapper : public OpenGLContext {
         std::cout << glGetString(GL_VERSION) << std::endl;
 
 		// Initialize GLEW entry points for our new context
-		glewInit();
+		m_glewInit();
 
         glGenFramebuffers(1,  &m_frameBufferID);
         glGenRenderbuffers(1, &m_renderBufferID);
