@@ -17,9 +17,12 @@
 #include <stdexcept>
 #include <string>
 
-#include <glew.h>
+#include <GL/glew.h>
 
 struct OpenGLContext {
+    // Factory method for getting the right platform-specific library
+    static std::unique_ptr<OpenGLContext> construct(int width, int height);
+
     void resize(int width, int height) {
         m_width = width;
         m_height = height;
@@ -27,13 +30,18 @@ struct OpenGLContext {
         m_resizeImpl(width, height);
     }
 
+    void makeCurrent() { m_makeCurrent(); }
+
     template<class F> void render(F &&f) {
         std::cout << "render called" << std::endl;
-        m_makeCurrent();
+        makeCurrent();
         f();
+    }
+
+	void finish() {
         glFinish();
         m_readImage();
-    }
+	}
 
     const std::vector<unsigned char> &buffer() { return m_buffer; }
 
@@ -69,5 +77,28 @@ protected:
     virtual void m_readImage() { }
     virtual void m_resizeImpl(int /* width */, int /* height */) { }
 };
+
+#if USE_EGL
+#include "EGLWrapper.inl"
+#elif USE_OSMESA
+#include "OSMesaWrapper.inl"
+#elif USE_CGL
+#include "CGLWrapper.inl"
+#else
+static_assert(false, "No context wrapper available");
+#endif
+
+// Factory method for getting the right platform-specific library
+inline std::unique_ptr<OpenGLContext> OpenGLContext::construct(int width, int height) {
+    #if USE_EGL
+    return std::make_unique<EGLWrapper>(width, height);
+    #elif USE_OSMESA
+    return std::make_unique<OSMesaWrapper>(width, height);
+    #elif USE_CGL
+    return std::make_unique<CGLWrapper>(width, height);
+    #else
+    static_assert(false, "No context wrapper available");
+    #endif
+}
 
 #endif /* end of include guard: OPENGLCONTEXT_HH */

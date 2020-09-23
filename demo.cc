@@ -2,9 +2,8 @@
 #include <stdlib.h>
 
 #include <stdexcept>
-// #include "OSMesaWrapper.hh"
-// #include "EGLWrapper.hh"
-#include "CGLWrapper.hh"
+#include "OpenGLContext.hh"
+#include "Shader.hh"
 
 int main(int argc, char *argv[])
 {
@@ -24,8 +23,12 @@ int main(int argc, char *argv[])
         height = atoi(argv[3]);
     }
 
-    CGLWrapper ctx(width, height);
-    ctx.render([&]() {
+    auto ctx = OpenGLContext::construct(width, height);
+    ctx->makeCurrent();
+
+    auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
+
+    ctx->render([&]() {
         GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
         GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
         GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -49,10 +52,9 @@ int main(int argc, char *argv[])
         glLoadIdentity();
 
 		glClearColor(0.0, 0.0, 1.0, 1.0);
-        glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glMaterialfv( GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, green_mat );
-
+		glColor3f(1.0, 0.0, 0.0);
         glBegin(GL_TRIANGLES);
             glVertex3f(0, 0, 0);
             glVertex3f(1, 0, 0);
@@ -60,8 +62,10 @@ int main(int argc, char *argv[])
         glEnd();
     });
 
+    ctx->finish();
+
     if (filename != NULL) {
-        ctx.write_ppm(filename);
+        ctx->write_ppm(filename);
     }
     else {
         printf("Specify a filename if you want to make an image file\n");
