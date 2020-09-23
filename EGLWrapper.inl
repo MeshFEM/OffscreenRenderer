@@ -11,7 +11,6 @@
 #ifndef EGLWRAPPER_HH
 #define EGLWRAPPER_HH
 
-#include "OpenGLContext.hh"
 #include <EGL/egl.h>
 
 struct EGLWrapper : public OpenGLContext {
@@ -44,6 +43,8 @@ struct EGLWrapper : public OpenGLContext {
         eglChooseConfig(m_display, configAttribs, &m_config, 1, &numConfigs);
 
         resize(width, height);
+        makeCurrent();
+        std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
     }
 
     ~EGLWrapper() {
@@ -54,7 +55,6 @@ struct EGLWrapper : public OpenGLContext {
 private:
     virtual void m_makeCurrent() override {
         eglMakeCurrent(m_display, m_surf, m_surf, m_ctx);
-        std::cout << glGetString(GL_VERSION) << std::endl;
     }
 
     void m_destroy_size_specific() {
@@ -79,9 +79,23 @@ private:
         m_surf = eglCreatePbufferSurface(m_display, m_config, pbufferAttribs);
         if (!m_surf) throw std::runtime_error("eglCreatePbufferSurface failed");
 
-        // Create a context and make it current
-        m_ctx = eglCreateContext(m_display, m_config, EGL_NO_CONTEXT, NULL);
+        // Create a 3.3 context and make it current
+        EGLint contextAttribs[] = {
+            EGL_CONTEXT_MAJOR_VERSION, 3,
+            EGL_CONTEXT_MINOR_VERSION, 3,
+            EGL_NONE
+        };
+        m_ctx = eglCreateContext(m_display, m_config, EGL_NO_CONTEXT, contextAttribs);
         if (!m_surf) throw std::runtime_error("eglCreateContext failed");
+
+        EGLint version;
+        eglQueryContext(m_display, m_ctx, EGL_CONTEXT_CLIENT_VERSION, &version);
+        std::cout << "Created context with version " << version << std::endl;
+
+        m_makeCurrent();
+
+		// Initialize GLEW entry points for our new context
+        glewInit();
     }
 
     EGLDisplay m_display = nullptr;

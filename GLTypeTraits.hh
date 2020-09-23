@@ -13,9 +13,9 @@
 #ifndef GLTYPES_HH
 #define GLTYPES_HH
 
+#include <Eigen/Dense>
 #include <GL/glew.h>
 #include <type_traits>
-#include <Eigen/Dense>
 #include <map>
 
 inline const char *getGLTypeName(GLenum type) {

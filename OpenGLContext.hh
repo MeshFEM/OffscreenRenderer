@@ -16,6 +16,7 @@
 #include <vector>
 #include <stdexcept>
 #include <string>
+#include <memory>
 
 #include <GL/glew.h>
 

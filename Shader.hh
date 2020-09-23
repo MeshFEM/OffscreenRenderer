@@ -10,7 +10,6 @@
 #ifndef SHADER_HH
 #define SHADER_HH
 
-#include <GL/glew.h>
 #include <vector>
 #include <array>
 #include <stdexcept>
@@ -18,8 +17,8 @@
 #include <fstream>
 #include <sstream>
 
-#include "GLErrors.hh"
 #include "GLTypeTraits.hh"
+#include "GLErrors.hh"
 
 // A vertex/fragment/geometry/etc shader object that can be compiled and linked
 // into a program

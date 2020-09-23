@@ -13,6 +13,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 # Configurable options
 option(USE_OSMESA "Use the software rasterization library OSMesa instead of a GPU-accelerated EGL/CGL context" OFF)
 
@@ -31,22 +33,29 @@ add_library(offscreen_renderer INTERFACE)
 find_package(Eigen3 REQUIRED)
 target_include_directories(offscreen_renderer INTERFACE ${EIGEN3_INCLUDE_DIR})
 
-find_package(OpenGL REQUIRED)
 
 find_package(GLEW REQUIRED)
 target_link_libraries(offscreen_renderer INTERFACE GLEW::GLEW ${OPENGL_LIBRARIES})
+target_compile_definitions(offscreen_renderer INTERFACE -DGLEW_STATIC)
 target_compile_options(offscreen_renderer INTERFACE -Wno-deprecated-declarations)
 
 
 if (USE_OSMESA)
+    find_package(OSMesa REQUIRED)
+    message("WARNING: GLEW and OSMESA from Ubuntu seem incompatible (glewInit fails) with a 'Missing GL Version' error")
     target_compile_definitions(offscreen_renderer INTERFACE -DUSE_OSMESA)
+    target_link_libraries(offscreen_renderer INTERFACE OSMesa::OSMesa)
 else()
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         # Default to CGL on Linux
+        find_package(OpenGL REQUIRED)
         target_compile_definitions(offscreen_renderer INTERFACE -DUSE_CGL)
     else()
+        set(OpenGL_GL_PREFERENCE "LEGACY")
+        find_package(OpenGL REQUIRED COMPONENTS OpenGL EGL)
         # Default to EGL on Linux
         target_compile_definitions(offscreen_renderer INTERFACE -DUSE_EGL)
+        target_link_libraries(offscreen_renderer INTERFACE OpenGL::EGL)
     endif()
 endif()
 

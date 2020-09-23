@@ -10,10 +10,10 @@
 #ifndef GLERRORS_HH
 #define GLERRORS_HH
 
-#include <GL/glew.h>
 #include <map>
 #include <string>
 #include <iostream>
+#include <GL/glew.h>
 
 inline std::string glGetErrorString() {
     GLenum error;

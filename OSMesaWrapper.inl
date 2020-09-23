@@ -11,16 +11,36 @@
 #ifndef OSMESAWRAPPER_HH
 #define OSMESAWRAPPER_HH
 
-#include "OpenGLContext.hh"
-#include "GL/osmesa.h"
+#include <GL/gl.h>
+#define GLAPI extern // Annoyingly, GLEW undefs this macro, breaking osmesa...
+#include <GL/osmesa.h>
 
 struct OSMesaWrapper : public OpenGLContext {
     OSMesaWrapper(int width, int height, GLenum format = OSMESA_RGBA,
                   GLint depthBits = 24, GLint stencilBits = 0, GLint accumBits = 0)
     {
-        m_ctx = OSMesaCreateContextExt(format, depthBits, stencilBits, accumBits, /* sharelist = */ NULL);
+        const GLint ctxAttribs[] = {
+            OSMESA_FORMAT,                GLint(format),
+            OSMESA_DEPTH_BITS,            depthBits,
+            OSMESA_STENCIL_BITS,          stencilBits,
+            OSMESA_ACCUM_BITS,            accumBits,
+            OSMESA_CONTEXT_MAJOR_VERSION, 3,
+            OSMESA_CONTEXT_MINOR_VERSION, 1,
+            0
+        };
+        m_ctx = OSMesaCreateContextAttribs(ctxAttribs, /* sharelist = */ NULL);
         if (!m_ctx) throw std::runtime_error("OSMesaCreateContext failed!");
         resize(width, height);
+
+        m_makeCurrent();
+
+		// Initialize GLEW entry points for our new context
+        glewExperimental=GL_TRUE;
+        auto status = glewInit();
+        if (status != GLEW_OK) {
+            std::cerr << "GLEW Error: " << glewGetErrorString(status) << std::endl;
+            throw std::runtime_error("glewInit failure");
+        }
     }
 
     ~OSMesaWrapper() {

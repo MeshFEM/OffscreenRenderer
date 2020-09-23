@@ -13,8 +13,6 @@
 #ifndef EGLWRAPPER_HH
 #define EGLWRAPPER_HH
 
-#include "OpenGLContext.hh"
-
 #include <OpenGL/CGLTypes.h>
 #include <OpenGL/CGLCurrent.h>
 #include <OpenGL/OpenGL.h>
@@ -50,7 +48,7 @@ struct CGLWrapper : public OpenGLContext {
 
         std::cout << glGetString(GL_VERSION) << std::endl;
 
-		// Initialize GLEW entry points
+		// Initialize GLEW entry points for our new context
 		glewInit();
 
         glGenFramebuffers(1,  &m_frameBufferID);

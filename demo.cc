@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <Eigen/Dense>
 #include <stdexcept>
 #include "OpenGLContext.hh"
 #include "Shader.hh"
@@ -26,22 +27,9 @@ int main(int argc, char *argv[])
     auto ctx = OpenGLContext::construct(width, height);
     ctx->makeCurrent();
 
-    auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
+    // auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
 
     ctx->render([&]() {
-        GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
-        GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
-        GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-        GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
-        GLfloat green_mat[] = { 0.2, 1.0, 0.2, 1.0 };
-
-        glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-        glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-        glEnable(GL_LIGHTING);
-        glEnable(GL_LIGHT0);
         glEnable(GL_DEPTH_TEST);
 
         glViewport(0, 0, width, height);
@@ -54,10 +42,12 @@ int main(int argc, char *argv[])
 		glClearColor(0.0, 0.0, 1.0, 1.0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glColor3f(1.0, 0.0, 0.0);
         glBegin(GL_TRIANGLES);
+            glColor3f(1.0, 0.0, 0.0);
             glVertex3f(0, 0, 0);
+            glColor3f(0.0, 1.0, 0.0);
             glVertex3f(1, 0, 0);
+            glColor3f(0.0, 0.0, 0.1);
             glVertex3f(0, 1, 0);
         glEnd();
     });
