@@ -79,8 +79,10 @@ protected:
     virtual void m_resizeImpl(int /* width */, int /* height */) { }
 
     void m_glewInit() {
-        auto status = glewInit();
-        if (status != GLEW_OK) {
+        GLenum status = glewInit();
+        // Silence spurious error with headless EGL
+        // https://github.com/nigels-com/glew/issues/273
+        if ((status != GLEW_OK) && (status != GLEW_ERROR_NO_GLX_DISPLAY)) {
             std::cerr << "GLEW Error: " << glewGetErrorString(status) << std::endl;
             throw std::runtime_error("glewInit failure");
         }

@@ -36,7 +36,6 @@ target_include_directories(offscreen_renderer INTERFACE ${EIGEN3_INCLUDE_DIR})
 
 find_package(GLEW REQUIRED)
 target_link_libraries(offscreen_renderer INTERFACE GLEW::GLEW ${OPENGL_LIBRARIES})
-target_compile_definitions(offscreen_renderer INTERFACE -DGLEW_STATIC)
 target_compile_options(offscreen_renderer INTERFACE -Wno-deprecated-declarations)
 
 
