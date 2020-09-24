@@ -2,9 +2,8 @@
 // RAIIGLResource.hh
 ////////////////////////////////////////////////////////////////////////////////
 /*! @file
-//  CRTP class providing a safe wrapper around an OpenGL resource
-//  (shader, program, etc.) that guards against leaks, dangling ids, and double
-//  frees.
+//  CRTP class providing a safe wrapper around an OpenGL resource (shader,
+//  buffer, etc.) guarding against leaks, dangling ids, and double frees.
 */
 //  Author:  Julian Panetta (jpanetta), julian.panetta@gmail.com
 //  Created:  09/23/2020 17:37:35
@@ -20,9 +19,11 @@ struct RAIIGLResource {
     }
 
     // Eliminate dangerous copy constructor/assignment;
-    // provide move constructor instead.
+    // provide move constructor/assignment instead.
     RAIIGLResource(const RAIIGLResource &) = delete;
     RAIIGLResource(RAIIGLResource &&b) : id(b.id) { b.id = 0; }
+
+    RAIIGLResource &operator=(RAIIGLResource &&b) { id = b.id; b.id = 0; return *this; }
 
     ~RAIIGLResource() {
         if (id != 0) {

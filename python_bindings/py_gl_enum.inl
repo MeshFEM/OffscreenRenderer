@@ -12,7 +12,11 @@ enum class GLenumWrapper : GLenum {
     wGL_FLOAT_MAT4   = GL_FLOAT_MAT4  ,
 
     // Capabilities
-    wGL_DEPTH_TEST = GL_DEPTH_TEST
+    wGL_DEPTH_TEST = GL_DEPTH_TEST,
+
+    // Buffer usage
+    wGL_DYNAMIC_DRAW = GL_DYNAMIC_DRAW,
+    wGL_STATIC_DRAW  = GL_STATIC_DRAW
 };
 
 GLenumWrapper wrapGLenum(GLenum val) {
@@ -45,5 +49,9 @@ void bindGLEnum(py::module &m) {
 
         // Capabilities
         .value("GL_DEPTH_TEST", GLenumWrapper::wGL_DEPTH_TEST)
+
+        // Buffer usage
+        .value("GL_DYNAMIC_DRAW", GLenumWrapper::wGL_DYNAMIC_DRAW)
+        .value("GL_STATIC_DRAW",  GLenumWrapper::wGL_STATIC_DRAW)
         ;
 }

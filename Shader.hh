@@ -47,11 +47,8 @@ private:
 };
 
 struct Uniform {
-    Uniform(GLuint prog, GLuint idx)
-        : index(idx)
-    {
+    Uniform(GLuint prog, GLuint idx) : index(idx) {
         std::array<char, 512> buf;
-        GLint size;
         glGetActiveUniform(prog, idx, 512, NULL, &size, &type, buf.data());
         name = std::string(buf.data());
     }
@@ -64,14 +61,22 @@ struct Uniform {
     }
 
     GLuint index;
-    std::string name;
+    GLint size;
     GLenum type;
+    std::string name;
 };
 
 struct Attribute {
-    int index;
-    std::string name;
+    Attribute(GLuint prog, GLuint idx) : index(idx) {
+        std::array<char, 512> buf;
+        glGetActiveAttrib(prog, idx, 512, NULL, &size, &type, buf.data());
+        name = std::string(buf.data());
+    }
+
+    GLuint index;
+    GLint size;
     GLenum type;
+    std::string name;
 };
 
 // Resource for a GLSL Shader
@@ -111,7 +116,10 @@ struct Shader {
         for (GLuint i = 0; i < GLuint(numUniforms); ++i)
             m_uniforms.emplace_back(m_prog.id, i);
 
-        // TODO: Query attributes
+        GLint numAttributes;
+        glGetProgramiv(m_prog.id, GL_ACTIVE_ATTRIBUTES, &numAttributes);
+        for (GLuint i = 0; i < GLuint(numAttributes); ++i)
+            m_attributes.emplace_back(m_prog.id, i);
     }
 
     Shader(const std::string &vtx, const std::string &frag, const std::string &geo)
@@ -144,12 +152,13 @@ struct Shader {
         return Shader(readFile(vtxFile), readFile(fragFile));
     }
 
-    void use() { glUseProgram(m_prog.id); }
+    void use() const { glUseProgram(m_prog.id); }
 
     template<typename T>
     void setUniform(const std::string &name, const T &val) {
         for (Uniform &u : m_uniforms) {
             if (u.name == name) {
+                use();
                 u.set(val);
                 glCheckError("setUniform");
                 return;
@@ -158,8 +167,8 @@ struct Shader {
         throw std::runtime_error("Uniform not present: " + name);
     }
 
-    const std::vector<Uniform>   &getUniforms  () { return m_uniforms; }
-    const std::vector<Attribute> &getAttributes() { return m_attributes; }
+    const std::vector<Uniform>   &getUniforms  () const { return m_uniforms; }
+    const std::vector<Attribute> &getAttributes() const { return m_attributes; }
 private:
     Program m_prog;
     std::vector<ShaderObject> m_objects;

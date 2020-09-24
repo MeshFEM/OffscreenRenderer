@@ -45,16 +45,15 @@ int main(int argc, char *argv[])
     indices << 0, 1, 2;
 
     VertexArrayObject vao;
-    vao.addAttribute(positions);
-    vao.addAttribute(colors);
-    vao.addIndexBuffer(indices);
+    vao.setAttribute(0, positions);
+    vao.setAttribute(1, colors);
+    vao.setIndexBuffer(indices);
 
     ctx->render([&]() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
-        shader.use();
-        vao.draw();
+        vao.draw(shader);
     });
 
     ctx->finish();
