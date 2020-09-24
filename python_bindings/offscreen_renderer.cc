@@ -1,5 +1,6 @@
-#include <pybind11/eigen.h>
 #include <pybind11/pybind11.h>
+#include <pybind11/eigen.h>
+#include <pybind11/stl.h>
 
 #include "../Shader.hh"
 #include "../OpenGLContext.hh"
@@ -28,13 +29,18 @@ struct addSetUniformBindings<T, Trest...>
 
 #include "py_gl_enum.inl"
 
-PYBIND11_MODULE(py_offscreen_renderer, m) {
+PYBIND11_MODULE(_offscreen_renderer, m) {
     py::class_<OpenGLContext>(m, "OpenGLContext")
         .def(py::init(&OpenGLContext::construct), py::arg("width"), py::arg("height"))
-        .def("resize", &OpenGLContext::resize, py::arg("width"), py::arg("height"))
+        .def("resize", &OpenGLContext::resize,    py::arg("width"), py::arg("height"))
         .def("makeCurrent", &OpenGLContext::makeCurrent)
-        .def("finish", &OpenGLContext::finish)
-        .def("buffer", &OpenGLContext::buffer)
+        .def("finish",      &OpenGLContext::finish)
+        .def("buffer",      &OpenGLContext::buffer)
+        .def("enable",      &OpenGLContext::enable,   py::arg("capability"))
+        .def("clear",       &OpenGLContext::clear,    py::arg("color") = Eigen::Vector3f::Zero())
+        .def("writePPM",    &OpenGLContext::writePPM, py::arg("path"))
+        .def_property_readonly("width",  &OpenGLContext::getWidth)
+        .def_property_readonly("height", &OpenGLContext::getHeight)
         ;
 
     bindGLEnum(m);
@@ -47,11 +53,10 @@ PYBIND11_MODULE(py_offscreen_renderer, m) {
 
     py::class_<Shader> pyShader(m, "Shader");
     pyShader
-        .def(py::init<const std::string &,
-                      const std::string &,
-                      const std::string &>(), py::arg("vtx"), py::arg("frag"), py::arg("geo") = std::string())
+        .def(py::init<const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"))
+        .def(py::init<const std::string &, const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"), py::arg("geo"))
         .def("use", &Shader::use)
-        .def("getUniforms", &Shader::getUniforms, py::return_value_policy::reference)
+        .def_property_readonly("uniforms", &Shader::getUniforms, py::return_value_policy::reference)
         ;
 
     addSetUniformBindings<int, float, Eigen::Vector2f, Eigen::Vector3f, Eigen::Vector4f,
@@ -59,7 +64,7 @@ PYBIND11_MODULE(py_offscreen_renderer, m) {
 
     py::class_<VertexArrayObject>(m, "VertexArrayObject")
         .def(py::init<>())
-        .def("addAttribute", &VertexArrayObject::addAttribute, py::arg("A"))
+        .def("addAttribute",   &VertexArrayObject::addAttribute,   py::arg("A"))
         .def("addIndexBuffer", &VertexArrayObject::addIndexBuffer, py::arg("A"))
         .def("bind", &VertexArrayObject::bind)
         .def("draw", &VertexArrayObject::draw)

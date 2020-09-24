@@ -22,8 +22,8 @@ struct BufferObject : RAIIGLResource<BufferObject> {
     using Base = RAIIGLResource<BufferObject>;
     using Base::id;
 
-    BufferObject(Eigen::Ref<const MXfR > A) { glGenBuffers(1, &id); setData(A); }
-    BufferObject(Eigen::Ref<const MXuiR> A) { glGenBuffers(1, &id); setData(A); }
+    BufferObject(Eigen::Ref<const MXfR > A) { glGenBuffers(1, &id); this->m_validateConstruction(); setData(A); }
+    BufferObject(Eigen::Ref<const MXuiR> A) { glGenBuffers(1, &id); this->m_validateConstruction(); setData(A); }
 
     void bind(GLenum target) const { glBindBuffer(target, id); }
 
@@ -48,6 +48,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
 
     VertexArrayObject() {
         glGenVertexArrays(1, &id);
+        this->m_validateConstruction();
     }
 
     // Each row of A is interpreted as a vertex attribute,
@@ -62,7 +63,9 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
                               A.cols(), GL_FLOAT, // # cols floats per vertex
                               GL_FALSE,  // Don't normalize
                               0, 0); // No gap between vertex data, and no offset from array beginning.
+        glCheckError();
         glEnableVertexAttribArray(attribIdx);
+        glCheckError();
     }
 
     void addIndexBuffer(Eigen::Ref<const MXuiR> A) {
@@ -70,6 +73,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         m_buffers.emplace_back(A);
         auto &buf = m_buffers.back();
         buf.bind(GL_ELEMENT_ARRAY_BUFFER);
+        glCheckError();
         m_size = A.size();
     }
 
@@ -79,6 +83,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         bind();
         if (m_size == 0) { throw std::runtime_error("Unknown size; did you forget to add an index buffer?"); }
         glDrawElements(GL_TRIANGLES, m_size, GL_UNSIGNED_INT, NULL);
+        glCheckError();
     }
 
     const std::vector<BufferObject> &buffers() const { return m_buffers; }

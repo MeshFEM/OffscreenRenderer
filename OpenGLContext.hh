@@ -31,7 +31,12 @@ struct OpenGLContext {
         m_height = height;
         m_buffer.resize(width * height * 4);
         m_resizeImpl(width, height);
+
+        glViewport(0, 0, width, height);
     }
+
+    int getWidth()  const { return m_width;  }
+    int getHeight() const { return m_height; }
 
     void makeCurrent() { m_makeCurrent(); }
 
@@ -41,6 +46,20 @@ struct OpenGLContext {
         f();
     }
 
+    void clear(Eigen::VectorXf color = Eigen::Vector3f::Zero()) {
+        makeCurrent();
+        if ((color.size() < 3) || (color.size() > 4))
+            throw std::runtime_error("Unexpected color size");
+        glClearColor(color[0], color[1], color[2], (color.size() == 3)  ? 1.0 : color[3]);
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    }
+
+    void enable(GLenum capability) {
+        makeCurrent();
+        glEnable(capability);
+    }
+
 	void finish() {
         glFinish();
         m_readImage();
@@ -48,7 +67,7 @@ struct OpenGLContext {
 
     const ImageBuffer &buffer() const { return m_buffer; }
 
-    void write_ppm(const std::string &path) const {
+    void writePPM(const std::string &path) const {
         std::ofstream outFile(path, std::ofstream::binary);
         if (!outFile.is_open())
             throw std::runtime_error("Failed to open " + path);

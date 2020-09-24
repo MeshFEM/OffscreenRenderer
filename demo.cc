@@ -50,7 +50,6 @@ int main(int argc, char *argv[])
     vao.addIndexBuffer(indices);
 
     ctx->render([&]() {
-        glViewport(0, 0, width, height);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
@@ -60,12 +59,8 @@ int main(int argc, char *argv[])
 
     ctx->finish();
 
-    if (filename != NULL) {
-        ctx->write_ppm(filename);
-    }
-    else {
-        printf("Specify a filename if you want to make an image file\n");
-    }
+    if (filename)
+        ctx->writePPM(filename);
 
     return 0;
 }

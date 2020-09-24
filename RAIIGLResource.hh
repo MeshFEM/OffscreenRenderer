@@ -16,8 +16,7 @@ template<class Derived>
 struct RAIIGLResource {
     RAIIGLResource() { }
     RAIIGLResource(GLuint _id) : id(_id) {
-        glCheckError("Resource creation");
-        if (id == 0) throw std::runtime_error("Resource creation failed");
+        m_validateConstruction();
     }
 
     // Eliminate dangerous copy constructor/assignment;
@@ -26,11 +25,18 @@ struct RAIIGLResource {
     RAIIGLResource(RAIIGLResource &&b) : id(b.id) { b.id = 0; }
 
     ~RAIIGLResource() {
-        if (id != 0)
+        if (id != 0) {
+            // std::cout << "Deleting resource " << id << std::endl;
             static_cast<Derived *>(this)->m_delete();
+        }
     }
 
     GLuint id = 0;
+protected:
+    void m_validateConstruction() {
+        glCheckError("Resource creation");
+        if (id == 0) throw std::runtime_error("Resource creation failed");
+    }
 };
 
 #endif /* end of include guard: RAIIGLRESOURCE_HH */
