@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include "OpenGLContext.hh"
 #include "Shader.hh"
+#include "Buffers.hh"
 
 int main(int argc, char *argv[])
 {
@@ -28,31 +29,33 @@ int main(int argc, char *argv[])
     ctx->makeCurrent();
 
     auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
-    for (const auto &u : shader->getUniforms()) {
+    for (const auto &u : shader.getUniforms()) {
         std::cout << "Uniform " << u.index << ": " << u.name << std::endl;
     }
 
+    Eigen::Matrix<float, 3, 3, Eigen::RowMajor> positions;
+    positions << -0.5f, -0.5f, 0.0f,
+                  0.5f, -0.5f, 0.0f,
+                  -0.5f,  0.5f, 0.0f;
+    Eigen::Matrix<float, 3, 4, Eigen::RowMajor> colors;
+    colors << 1.0f, 0.0f, 0.0f, 1.0f,
+              0.0f, 1.0f, 0.0f, 1.0f,
+              0.0f, 0.0f, 1.0f, 1.0f;
+    Eigen::Matrix<unsigned int, 3, 1> indices;
+    indices << 0, 1, 2;
+
+    VertexArrayObject vao;
+    vao.addAttribute(positions);
+    vao.addAttribute(colors);
+    vao.addIndexBuffer(indices);
+
     ctx->render([&]() {
+        glViewport(0, 0, width, height);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
-        glViewport(0, 0, width, height);
-        glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
-        glOrtho(-2.5, 2.5, -2.5, 2.5, -10.0, 10.0);
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-
-		glClearColor(0.0, 0.0, 1.0, 1.0);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        glBegin(GL_TRIANGLES);
-            glColor3f(1.0, 0.0, 0.0);
-            glVertex3f(0, 0, 0);
-            glColor3f(0.0, 1.0, 0.0);
-            glVertex3f(1, 0, 0);
-            glColor3f(0.0, 0.0, 0.1);
-            glVertex3f(0, 1, 0);
-        glEnd();
+        shader.use();
+        vao.draw();
     });
 
     ctx->finish();

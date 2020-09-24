@@ -13,41 +13,34 @@
 #include <vector>
 #include <array>
 #include <stdexcept>
-#include <memory>
 #include <fstream>
 #include <sstream>
 
 #include "GLTypeTraits.hh"
 #include "GLErrors.hh"
+#include "RAIIGLResource.hh"
 
 // A vertex/fragment/geometry/etc shader object that can be compiled and linked
 // into a program
-struct ShaderObject {
+struct ShaderObject : RAIIGLResource<ShaderObject> {
+    using Base = RAIIGLResource<ShaderObject>;
+    using Base::id;
+
     // Create shader and load in source (but do not compile yet!)
-    ShaderObject(const std::string &source, GLenum type) {
-        id = glCreateShader(type);
-        glCheckError("create shader");
+    ShaderObject(const std::string &source, GLenum type)
+        : Base(glCreateShader(type))
+    {
         const char *src = source.c_str();
         glShaderSource(id, /* one string */1, &src, /* source is null terminated */ NULL);
     }
-
-    // Eliminate dangerous copy constructor/assignment, provide move constructor.
-    ShaderObject(const ShaderObject &) = delete;
-    ShaderObject(ShaderObject &&b) : id(b.id) { b.id = 0; }
 
     void compile() {
         glCompileShader(id);
         glCheckStatus(id, GL_COMPILE_STATUS);
     }
-
-    ~ShaderObject() {
-        if (id != 0) {
-            // std::cout << "Deleting shader " << id << std::endl;
-            glDeleteShader(id);
-        }
-    }
-
-    GLuint id = 0;
+private:
+    friend class RAIIGLResource<ShaderObject>;
+    void m_delete() { glDeleteShader(id); }
 };
 
 struct Uniform {
@@ -78,27 +71,16 @@ struct Attribute {
     GLenum type;
 };
 
-// Wrapper for a shader program
+// Resource for a GLSL Shader
 struct Shader {
-    struct ProgRAIIWrapper {
-        ProgRAIIWrapper() {
-            id = glCreateProgram();
-            glCheckError();
-        }
+    struct Program : RAIIGLResource<Program> {
+        using Base = RAIIGLResource<Program>;
+        using Base::id;
+        Program() : Base(glCreateProgram()) { }
 
-        // Eliminate dangerous copy constructor/assignment, provide move constructor.
-        ProgRAIIWrapper(const ProgRAIIWrapper &) = delete;
-        ProgRAIIWrapper(ProgRAIIWrapper &&b)
-            : id(b.id) { b.id = 0; }
-
-        ~ProgRAIIWrapper() {
-            if (id != 0) {
-                // std::cout << "Deleting program " << id << std::endl;
-                glDeleteProgram(id);
-            }
-        }
-
-        GLuint id = 0;
+    private:
+        friend class RAIIGLResource<Program>;
+        void m_delete() { glDeleteProgram(id); }
     };
 
     using Sources = std::vector<std::string>;
@@ -135,6 +117,15 @@ struct Shader {
     Shader(const std::string &vtx, const std::string &frag)
         : Shader(Sources(1, vtx), Sources(1, frag)) { }
 
+    // Copy is disallowed, but move is ok.
+    Shader(const Shader &) = delete;
+    Shader(Shader &&b) :
+        m_prog(std::move(b.m_prog)),
+        m_objects(std::move(b.m_objects)),
+        m_uniforms(std::move(b.m_uniforms)),
+        m_attributes(std::move(b.m_attributes))
+    { }
+
     static std::string readFile(const std::string &path) {
         std::ifstream inFile(path);
         if (!inFile.is_open()) throw std::runtime_error("Couldn't open input file " + path);
@@ -143,10 +134,11 @@ struct Shader {
         return ss.str();
     }
 
-    static std::unique_ptr<Shader> fromFiles(const std::string &vtxFile, const std::string &fragFile, const std::string &geoFile = std::string()) {
+    // Factory method to construct from shaders stored in files.
+    static Shader fromFiles(const std::string &vtxFile, const std::string &fragFile, const std::string &geoFile = std::string()) {
         if (geoFile.size())
-            return std::make_unique<Shader>(readFile(vtxFile), readFile(fragFile), readFile(geoFile));
-        return std::make_unique<Shader>(readFile(vtxFile), readFile(fragFile));
+            return Shader(readFile(vtxFile), readFile(fragFile), readFile(geoFile));
+        return Shader(readFile(vtxFile), readFile(fragFile));
     }
 
     void use() { glUseProgram(m_prog.id); }
@@ -165,7 +157,7 @@ struct Shader {
     const std::vector<Uniform>   &getUniforms  () { return m_uniforms; }
     const std::vector<Attribute> &getAttributes() { return m_attributes; }
 private:
-    ProgRAIIWrapper m_prog;
+    Program m_prog;
     std::vector<ShaderObject> m_objects;
     std::vector<Uniform>      m_uniforms;
     std::vector<Attribute>    m_attributes;
