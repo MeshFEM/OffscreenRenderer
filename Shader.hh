@@ -26,9 +26,14 @@ struct ShaderObject {
     // Create shader and load in source (but do not compile yet!)
     ShaderObject(const std::string &source, GLenum type) {
         id = glCreateShader(type);
+        glCheckError("create shader");
         const char *src = source.c_str();
         glShaderSource(id, /* one string */1, &src, /* source is null terminated */ NULL);
     }
+
+    // Eliminate dangerous copy constructor/assignment, provide move constructor.
+    ShaderObject(const ShaderObject &) = delete;
+    ShaderObject(ShaderObject &&b) : id(b.id) { b.id = 0; }
 
     void compile() {
         glCompileShader(id);
@@ -36,10 +41,13 @@ struct ShaderObject {
     }
 
     ~ShaderObject() {
-        glDeleteShader(id);
+        if (id != 0) {
+            // std::cout << "Deleting shader " << id << std::endl;
+            glDeleteShader(id);
+        }
     }
 
-    GLuint id;
+    GLuint id = 0;
 };
 
 struct Uniform {
@@ -78,11 +86,19 @@ struct Shader {
             glCheckError();
         }
 
+        // Eliminate dangerous copy constructor/assignment, provide move constructor.
+        ProgRAIIWrapper(const ProgRAIIWrapper &) = delete;
+        ProgRAIIWrapper(ProgRAIIWrapper &&b)
+            : id(b.id) { b.id = 0; }
+
         ~ProgRAIIWrapper() {
-            glDeleteProgram(id);
+            if (id != 0) {
+                // std::cout << "Deleting program " << id << std::endl;
+                glDeleteProgram(id);
+            }
         }
 
-        GLuint id;
+        GLuint id = 0;
     };
 
     using Sources = std::vector<std::string>;
@@ -98,6 +114,7 @@ struct Shader {
         for (auto &obj : m_objects) {
             obj.compile();
             glAttachShader(m_prog.id, obj.id);
+            glCheckError("attach shader");
         }
 
         glLinkProgram(m_prog.id);

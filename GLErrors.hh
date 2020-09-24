@@ -44,8 +44,16 @@ inline void glCheckError() {
     }
 }
 
+inline void glCheckError(const std::string &operation) {
+    auto err = glGetErrorString();
+    if (err.size()) {
+        std::cerr << err;
+        throw std::runtime_error("GL error encountered upon " + operation + " -- check cerr");
+    }
+}
+
 inline void glCheckStatus(GLint id, GLenum statusType) {
-    int success;
+    GLint success;
     std::string desc;
     if (statusType == GL_COMPILE_STATUS) {
         glGetShaderiv(id, GL_COMPILE_STATUS, &success);
@@ -59,7 +67,7 @@ inline void glCheckStatus(GLint id, GLenum statusType) {
         throw std::logic_error("Unknown status type");
     }
 
-    if(!success) {
+    if (success == GL_FALSE) {
         char infoLog[512];
         glGetShaderInfoLog(id, 512, NULL, infoLog);
         std::cerr << desc << " failed: " << infoLog << std::endl;
