@@ -49,6 +49,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         .def_readonly("index", &Uniform::index)
         .def_readonly("name",  &Uniform::name)
         .def_property_readonly("type", [](const Uniform &u) { return wrapGLenum(u.type); })
+        .def("__repr__", [](const Uniform &u) { return "Uniform '" + u.name + "': " + getGLenumRepr(u.type); })
         ;
 
     py::class_<Shader> pyShader(m, "Shader");

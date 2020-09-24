@@ -23,6 +23,12 @@ GLenum unwrapGLenum(GLenumWrapper val) {
     return static_cast<GLenum>(val);
 }
 
+// Get a string representation of the GLenum "val"
+// (Only works for the values for which we have created Python bindings)
+std::string getGLenumRepr(GLenum val) {
+    return std::string(py::repr(py::cast(wrapGLenum(val))));
+}
+
 void bindGLEnum(py::module &m) {
     py::enum_<GLenumWrapper>(m, "GLenum")
         // Types

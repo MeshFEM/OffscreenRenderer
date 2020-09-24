@@ -28,27 +28,17 @@ inline std::string glGetErrorString() {
             {GL_STACK_OVERFLOW,                "Stack overflow"},
     };
     while ((error = glGetError()) != GL_NO_ERROR) {
-        std::string desc;
-        try         { desc = errorDescriptions.at(error); }
-        catch (...) { desc = "Unknown"; }
-        result += "GL error: " + desc + "\n";
+        if (result.size()) result += '\n';
+        try         { result += errorDescriptions.at(error); }
+        catch (...) { result += "Unknown"; }
     }
     return result;
 }
 
-inline void glCheckError() {
+inline void glCheckError(const std::string &operation = "") {
     auto err = glGetErrorString();
     if (err.size()) {
-        std::cerr << err;
-        throw std::runtime_error("GL error -- check cerr");
-    }
-}
-
-inline void glCheckError(const std::string &operation) {
-    auto err = glGetErrorString();
-    if (err.size()) {
-        std::cerr << err;
-        throw std::runtime_error("GL error encountered upon " + operation + " -- check cerr");
+        throw std::runtime_error("GL error" + ((operation.size() ? " encountered in " : "") + operation) + ":\n" + err);
     }
 }
 

@@ -31,20 +31,19 @@ struct ShaderObject : RAIIGLResource<ShaderObject> {
         : Base(glCreateShader(type))
     {
         if (source.size() == 0) throw std::runtime_error("Empty shader");
-        std::cout << "Created shader " << id << std::endl; 
         const char *src = source.c_str();
         glShaderSource(id, /* one string */1, &src, /* source is null terminated */ NULL);
-        glCheckError();
+        glCheckError("shader construction");
     }
 
     void compile() {
         glCompileShader(id);
         glCheckStatus(id, GL_COMPILE_STATUS);
-        glCheckError();
+        glCheckError("shader compilation");
     }
 private:
     friend class RAIIGLResource<ShaderObject>;
-    void m_delete() { glDeleteShader(id); std::cout << "Deleted shader " << id << std::endl; }
+    void m_delete() { glDeleteShader(id); /* std::cout << "Deleted shader " << id << std::endl; */ }
 };
 
 struct Uniform {
@@ -80,11 +79,11 @@ struct Shader {
     struct Program : RAIIGLResource<Program> {
         using Base = RAIIGLResource<Program>;
         using Base::id;
-        Program() : Base(glCreateProgram()) { std::cout << "Created program " << id << std::endl; }
+        Program() : Base(glCreateProgram()) { this->m_validateConstruction(); }
 
     private:
         friend class RAIIGLResource<Program>;
-        void m_delete() { glDeleteProgram(id); std::cout << "Deleted program " << id << std::endl; }
+        void m_delete() { glDeleteProgram(id); /* std::cout << "Deleted program " << id << std::endl; */ }
     };
 
     using Sources = std::vector<std::string>;
@@ -152,6 +151,7 @@ struct Shader {
         for (Uniform &u : m_uniforms) {
             if (u.name == name) {
                 u.set(val);
+                glCheckError("setUniform");
                 return;
             }
         }
