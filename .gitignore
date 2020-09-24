@@ -1,5 +1,6 @@
 a.out
 .DS_Store
+*.so
 *.ppm
 *.png
 build

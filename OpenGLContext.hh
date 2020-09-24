@@ -21,6 +21,8 @@
 #include <GL/glew.h>
 
 struct OpenGLContext {
+    using ImageBuffer = Eigen::Matrix<unsigned char, Eigen::Dynamic, 1>;
+
     // Factory method for getting the right platform-specific library
     static std::unique_ptr<OpenGLContext> construct(int width, int height);
 
@@ -44,7 +46,7 @@ struct OpenGLContext {
         m_readImage();
 	}
 
-    const std::vector<unsigned char> &buffer() { return m_buffer; }
+    const ImageBuffer &buffer() const { return m_buffer; }
 
     void write_ppm(const std::string &path) const {
         std::ofstream outFile(path, std::ofstream::binary);
@@ -71,7 +73,7 @@ struct OpenGLContext {
 
 protected:
     int m_width, m_height;
-    std::vector<unsigned char> m_buffer;
+    ImageBuffer m_buffer;
 
     virtual void m_makeCurrent() = 0;
 

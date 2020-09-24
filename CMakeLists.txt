@@ -33,7 +33,6 @@ add_library(offscreen_renderer INTERFACE)
 find_package(Eigen3 REQUIRED)
 target_include_directories(offscreen_renderer INTERFACE ${EIGEN3_INCLUDE_DIR})
 
-
 find_package(GLEW REQUIRED)
 target_link_libraries(offscreen_renderer INTERFACE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_compile_options(offscreen_renderer INTERFACE -Wno-deprecated-declarations)
@@ -64,3 +63,5 @@ add_definitions("-DSHADER_PATH=\"${SHADER_PATH}\"")
 add_executable(demo demo.cc)
 target_compile_definitions(demo PRIVATE "-DSHADER_PATH=\"${SHADER_PATH}\"")
 target_link_libraries(demo offscreen_renderer)
+
+add_subdirectory(python_bindings)
