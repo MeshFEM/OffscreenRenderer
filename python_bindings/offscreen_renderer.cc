@@ -8,22 +8,37 @@
 
 namespace py = pybind11;
 
-template<typename... T>
-struct addSetUniformBindings;
+// Apply F::run<T>(args) for each T in Ts
+template<template<typename> class F, typename... Ts>
+struct MetaMap;
 
-template<>
-struct addSetUniformBindings<> {
-    template<class PyShader>
-    static void run(PyShader &/* pyShader */) { }
+template<template<typename> class F>
+struct MetaMap<F> {
+    template<typename... Args>
+    static void run(Args &&... args) { }
 };
 
-template<typename T, typename... Trest>
-struct addSetUniformBindings<T, Trest...>
-{
+template<template<typename> class F, typename T, typename... Ts>
+struct MetaMap<F, T, Ts...> {
+    template<typename... Args>
+    static void run(Args &&... args) {
+        F<T>::run(std::forward<Args>(args)...);
+    }
+};
+
+template<typename T>
+struct BindSetUniform {
     template<class PyShader>
     static void run(PyShader &pyShader) {
         pyShader.def("setUniform", &Shader::setUniform<T>, py::arg("name"), py::arg("val"));
-        addSetUniformBindings<Trest...>::run(pyShader);
+    }
+};
+
+template<typename T>
+struct BindSetConstAttribute {
+    template<class PyVAO>
+    static void run(PyVAO &pyVAO) {
+        pyVAO.def("setConstantAttribute", &VertexArrayObject::setConstantAttribute<T>, py::arg("attribIdx"), py::arg("val"));
     }
 };
 
@@ -70,8 +85,8 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         .def_property_readonly("attributes", &Shader::getAttributes, py::return_value_policy::reference)
         ;
 
-    addSetUniformBindings<int, float, Eigen::Vector2f, Eigen::Vector3f, Eigen::Vector4f,
-                                      Eigen::Matrix2f, Eigen::Matrix3f, Eigen::Matrix4f>::run(pyShader);
+    MetaMap<BindSetUniform, int, float, Eigen::Vector2f, Eigen::Vector3f, Eigen::Vector4f,
+                                        Eigen::Matrix2f, Eigen::Matrix3f, Eigen::Matrix4f>::run(pyShader);
 
     py::class_<BufferObject>(m, "BufferObject")
         .def("bind", &BufferObject::bind)
@@ -79,7 +94,8 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         .def("setData", [](BufferObject &b, Eigen::Ref<const MXuiR> data, GLenumWrapper usage) { b.setData(data, unwrapGLenum(usage)); }, py::arg("data"), py::arg("usage") = GLenumWrapper::wGL_DYNAMIC_DRAW)
         ;
 
-    py::class_<VertexArrayObject>(m, "VertexArrayObject")
+    py::class_<VertexArrayObject> pyVAO(m, "VertexArrayObject");
+    pyVAO
         .def(py::init<>())
         .def("setAttribute",   &VertexArrayObject::setAttribute,   py::arg("index"), py::arg("A"))
         .def("setIndexBuffer", &VertexArrayObject::setIndexBuffer, py::arg("A"))
@@ -88,4 +104,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         .def_property_readonly("attributeBuffers", &VertexArrayObject::attributeBuffers, py::return_value_policy::reference)
         .def_property_readonly("indexBuffer",      &VertexArrayObject::indexBuffer,      py::return_value_policy::reference)
         ;
+
+    MetaMap<BindSetConstAttribute, int, float, Eigen::Vector2f, Eigen::Vector3f, Eigen::Vector4f,
+                                               Eigen::Matrix2f, Eigen::Matrix3f, Eigen::Matrix4f>::run(pyVAO);
 }

@@ -19,6 +19,7 @@
 #include "GLTypeTraits.hh"
 #include "GLErrors.hh"
 #include "RAIIGLResource.hh"
+#include "UASetters.hh"
 
 // A vertex/fragment/geometry/etc shader object that can be compiled and linked
 // into a program
@@ -57,7 +58,7 @@ struct Uniform {
     void set(const T &val) {
         using Traits = GLTypeTraits<T>;
         if (Traits::type != type) throw std::runtime_error("Uniform type mismatch");
-        Traits::uniformSetter(index, val);
+        detail::setUniform(index, val);
     }
 
     GLuint index;

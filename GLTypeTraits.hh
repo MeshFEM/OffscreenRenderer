@@ -39,16 +39,16 @@ inline const char *getGLTypeName(GLenum type) {
 template<typename T>
 struct GLTypeTraitsImpl;
 
-template<> struct GLTypeTraitsImpl<GLfloat>         { static constexpr GLenum type = GL_FLOAT       ; static void uniformSetter(GLint loc,                  GLfloat f) { glUniform1f       (loc,           f);                   } };
-template<> struct GLTypeTraitsImpl<GLint>           { static constexpr GLenum type = GL_INT         ; static void uniformSetter(GLint loc,                    GLint i) { glUniform1i       (loc,           i);                   } };
-template<> struct GLTypeTraitsImpl<GLuint>          { static constexpr GLenum type = GL_UNSIGNED_INT; static void uniformSetter(GLint loc,                   GLuint u) { glUniform1ui      (loc,           u);                   } };
-template<> struct GLTypeTraitsImpl<bool>            { static constexpr GLenum type = GL_BOOL        ; static void uniformSetter(GLint loc,                     bool b) { glUniform1i       (loc,           static_cast<int>(b)); } };
-template<> struct GLTypeTraitsImpl<Eigen::Vector2f> { static constexpr GLenum type = GL_FLOAT_VEC2  ; static void uniformSetter(GLint loc, const Eigen::Vector2f &vec) { glUniform2fv      (loc, 1,        vec.data());          } };
-template<> struct GLTypeTraitsImpl<Eigen::Vector3f> { static constexpr GLenum type = GL_FLOAT_VEC3  ; static void uniformSetter(GLint loc, const Eigen::Vector3f &vec) { glUniform3fv      (loc, 1,        vec.data());          } };
-template<> struct GLTypeTraitsImpl<Eigen::Vector4f> { static constexpr GLenum type = GL_FLOAT_VEC4  ; static void uniformSetter(GLint loc, const Eigen::Vector4f &vec) { glUniform4fv      (loc, 1,        vec.data());          } };
-template<> struct GLTypeTraitsImpl<Eigen::Matrix2f> { static constexpr GLenum type = GL_FLOAT_MAT2  ; static void uniformSetter(GLint loc, const Eigen::Matrix2f &mat) { glUniformMatrix2fv(loc, 1, false, mat.data());          } };
-template<> struct GLTypeTraitsImpl<Eigen::Matrix3f> { static constexpr GLenum type = GL_FLOAT_MAT3  ; static void uniformSetter(GLint loc, const Eigen::Matrix3f &mat) { glUniformMatrix3fv(loc, 1, false, mat.data());          } };
-template<> struct GLTypeTraitsImpl<Eigen::Matrix4f> { static constexpr GLenum type = GL_FLOAT_MAT4  ; static void uniformSetter(GLint loc, const Eigen::Matrix4f &mat) { glUniformMatrix4fv(loc, 1, false, mat.data());          } };
+template<> struct GLTypeTraitsImpl<GLfloat>         { static constexpr GLenum type = GL_FLOAT       ; };
+template<> struct GLTypeTraitsImpl<GLint>           { static constexpr GLenum type = GL_INT         ; };
+template<> struct GLTypeTraitsImpl<GLuint>          { static constexpr GLenum type = GL_UNSIGNED_INT; };
+template<> struct GLTypeTraitsImpl<bool>            { static constexpr GLenum type = GL_BOOL        ; };
+template<> struct GLTypeTraitsImpl<Eigen::Vector2f> { static constexpr GLenum type = GL_FLOAT_VEC2  ; };
+template<> struct GLTypeTraitsImpl<Eigen::Vector3f> { static constexpr GLenum type = GL_FLOAT_VEC3  ; };
+template<> struct GLTypeTraitsImpl<Eigen::Vector4f> { static constexpr GLenum type = GL_FLOAT_VEC4  ; };
+template<> struct GLTypeTraitsImpl<Eigen::Matrix2f> { static constexpr GLenum type = GL_FLOAT_MAT2  ; };
+template<> struct GLTypeTraitsImpl<Eigen::Matrix3f> { static constexpr GLenum type = GL_FLOAT_MAT3  ; };
+template<> struct GLTypeTraitsImpl<Eigen::Matrix4f> { static constexpr GLenum type = GL_FLOAT_MAT4  ; };
 
 // "Decay" Eigen expression templates to their underlying evaluated type.
 // Leave non-Eigen types unchanged.

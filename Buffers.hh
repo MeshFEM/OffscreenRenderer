@@ -12,6 +12,7 @@
 
 #include "GLTypeTraits.hh"
 #include "RAIIGLResource.hh"
+#include "UASetters.hh"
 
 // We need to use row-major types in order to interpret each row as giving a
 // vertex's attributes (following libigl conventions).
@@ -65,6 +66,17 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
                               0, 0); // No gap between vertex data, and no offset from array beginning.
         glCheckError();
         glEnableVertexAttribArray(attribIdx);
+        glCheckError();
+    }
+
+    template<typename T>
+    void setConstantAttribute(int attribIdx, const T &a) {
+        bind();
+        m_attributes[attribIdx] = BufferObject(); // Empty dummy attribute -- we need to set this to pass the validation in `draw`
+
+        glDisableVertexAttribArray(attribIdx);
+        detail::setAttribute(attribIdx, a);
+
         glCheckError();
     }
 

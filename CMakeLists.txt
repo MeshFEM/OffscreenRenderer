@@ -57,7 +57,7 @@ else()
     endif()
 endif()
 
-set(SHADER_PATH  ${CMAKE_SOURCE_DIR} CACHE PATH "location of shader programs")
+set(SHADER_PATH  ${CMAKE_SOURCE_DIR}/shaders CACHE PATH "location of shader programs")
 add_definitions("-DSHADER_PATH=\"${SHADER_PATH}\"")
 
 add_executable(demo demo.cc)
