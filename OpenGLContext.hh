@@ -18,6 +18,8 @@
 #include <string>
 #include <memory>
 
+#include "write_png.h"
+
 #include <GL/glew.h>
 
 struct OpenGLContext {
@@ -86,6 +88,10 @@ struct OpenGLContext {
                 outFile.write((const char *) &m_buffer[4 * pixel], 3);
             }
         }
+    }
+
+    void writePNG(const std::string &path) const {
+        write_png_RGBA(path, m_width, m_height, m_buffer.data(), /* verticalFlip = */ true);
     }
 
     virtual ~OpenGLContext()  { }

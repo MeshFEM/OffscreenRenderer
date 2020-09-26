@@ -16,35 +16,38 @@
 #include <OpenGL/CGLTypes.h>
 #include <OpenGL/CGLCurrent.h>
 #include <OpenGL/OpenGL.h>
+#include "GLErrors.hh"
 
 struct CGLWrapper : public OpenGLContext {
     CGLWrapper(int width, int height, GLenum /* format */ = GL_RGBA,
-               GLint depthBits = 24, GLint /* stencilBits */ = 0, GLint /* accumBits */ = 0)
+               GLint depthBits = 24, GLint stencilBits = 0, GLint accumBits = 0)
     {
-		std::cout << "Initialize CGL" << std::endl;
         // Initialize CGL
-        CGLPixelFormatAttribute attributes[4] = {
-            kCGLPFAAccelerated,   // no software rendering
-            kCGLPFAOpenGLProfile, // core profile with the version stated below
-            (CGLPixelFormatAttribute) kCGLOGLPVersion_3_2_Core,
-            (CGLPixelFormatAttribute) 0
+        CGLPixelFormatAttribute pixAttributes[12] = {
+            kCGLPFAAccelerated,   // Presence of boolean flags implies `true` value according to documentation
+            kCGLPFAOpenGLProfile, CGLPixelFormatAttribute(kCGLOGLPVersion_3_2_Core), // Uses latest available version (not actually 3.2!!)
+            kCGLPFADepthSize,     CGLPixelFormatAttribute(24),
+            kCGLPFAAlphaSize,     CGLPixelFormatAttribute(8),
+            kCGLPFAStencilSize,   CGLPixelFormatAttribute(stencilBits),
+            kCGLPFAAccumSize,     CGLPixelFormatAttribute(accumBits),
+            CGLPixelFormatAttribute(0)
         };
 
-        CGLPixelFormatObj pix;
-        GLint num;
-        CGLError errorCode = CGLChoosePixelFormat(attributes, &pix, &num);
-        if (errorCode != kCGLNoError)
-            throw std::runtime_error("CGLChoosePixelFormat failure");
+        {
+            CGLPixelFormatObj pix;
+            GLint num;
+            CGLError errorCode = CGLChoosePixelFormat(pixAttributes, &pix, &num);
+            if (errorCode != kCGLNoError) throw std::runtime_error("CGLChoosePixelFormat failure");
 
-        errorCode = CGLCreateContext(pix, NULL, &m_ctx);
-        if (errorCode != kCGLNoError)
-            throw std::runtime_error("CGLCreateContext failure");
+            errorCode = CGLCreateContext(pix, NULL, &m_ctx);
+            if (errorCode != kCGLNoError) throw std::runtime_error("CGLCreateContext failure");
 
-        CGLDestroyPixelFormat(pix);
+            CGLDestroyPixelFormat(pix);
+        }
 
-        errorCode = CGLSetCurrentContext(m_ctx);
-        if (errorCode != kCGLNoError)
-            throw std::runtime_error("CGLSetCurrentContext failure");
+		// std::cout << "Initialize CGL " << m_ctx << std::endl;
+
+        m_makeCurrent();
 
         std::cout << glGetString(GL_VERSION) << std::endl;
 
@@ -55,45 +58,55 @@ struct CGLWrapper : public OpenGLContext {
         glGenRenderbuffers(1, &m_renderBufferID);
         glGenRenderbuffers(1, &m_depthBufferID);
 
-        resize(width, height);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_renderBufferID);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_RENDERBUFFER,  m_depthBufferID);
-
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            throw std::runtime_error("framebuffer is not complete!");
-
-        resize(width, height);
+        resize(width, height); // Trigger buffer generation/binding
     }
 
     ~CGLWrapper() {
+        // std::cout << "Destroy CGL " << m_ctx << std::endl;
+        makeCurrent();
+
+        auto oldErrors = glGetErrorString(); // Flush any old errors
+        if (oldErrors.size())
+            std::cerr << "Unreported errors found on context destruction:" << std::endl << oldErrors << std::endl;
+
         glDeleteRenderbuffers(1, &m_renderBufferID);
         glDeleteRenderbuffers(1, &m_depthBufferID);
         glDeleteFramebuffers (1, &m_frameBufferID);
 
-        CGLSetCurrentContext(nullptr);
+        // CGLSetCurrentContext(nullptr);
         CGLDestroyContext(m_ctx);
     }
 
 private:
     virtual void m_makeCurrent() override {
-        CGLSetCurrentContext(m_ctx);
+		// std::cout << "Make current CGL " << m_ctx << std::endl;
+        CGLError errorCode = CGLSetCurrentContext(m_ctx);
+        if (errorCode != kCGLNoError)
+            throw std::runtime_error("CGLSetCurrentContext failure");
     }
 
     virtual void m_readImage() override {
         glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
         glBindRenderbuffer(GL_RENDERBUFFER, m_renderBufferID);
         glReadPixels(0, 0, m_width, m_height, GL_RGBA, GL_UNSIGNED_BYTE, m_buffer.data());
+        glCheckError("Read image");
     }
 
     virtual void m_resizeImpl(int width, int height) override {
-        glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
         glBindRenderbuffer(GL_RENDERBUFFER, m_renderBufferID);
-        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGB8, width, height);
+        glRenderbufferStorage(GL_RENDERBUFFER, GL_RGBA8, width, height);
 
         glBindRenderbuffer(GL_RENDERBUFFER, m_depthBufferID);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+
+        glBindFramebuffer(GL_FRAMEBUFFER, m_frameBufferID);
+        glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, m_renderBufferID);
+        glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT , GL_RENDERBUFFER,  m_depthBufferID);
+
+        glCheckError("allocate framebuffers");
+
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+            throw std::runtime_error("framebuffer is not complete!");
     }
 
     CGLContextObj m_ctx = nullptr;

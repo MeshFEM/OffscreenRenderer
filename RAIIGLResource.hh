@@ -23,10 +23,13 @@ struct RAIIGLResource {
     RAIIGLResource(const RAIIGLResource &) = delete;
     RAIIGLResource(RAIIGLResource &&b) : id(b.id) { b.id = 0; }
 
-    RAIIGLResource &operator=(RAIIGLResource &&b) { id = b.id; b.id = 0; return *this; }
+    RAIIGLResource &operator=(const RAIIGLResource &  ) = delete;
+    RAIIGLResource &operator=(      RAIIGLResource &&b) { id = b.id; b.id = 0; return *this; }
+
+    bool allocated() const { return id != 0; }
 
     ~RAIIGLResource() {
-        if (id != 0) {
+        if (allocated()) {
             // std::cout << "Deleting resource " << id << std::endl;
             static_cast<Derived *>(this)->m_delete();
         }
@@ -35,7 +38,7 @@ struct RAIIGLResource {
     GLuint id = 0;
 protected:
     void m_validateConstruction() {
-        glCheckError("Resource creation");
+        glCheckError("resource creation");
         if (id == 0) throw std::runtime_error("Resource creation failed");
     }
 };

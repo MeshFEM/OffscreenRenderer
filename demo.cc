@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
 
     auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
     for (const auto &u : shader.getUniforms()) {
-        std::cout << "Uniform " << u.index << ": " << u.name << std::endl;
+        std::cout << "Uniform " << u.loc << ": " << u.name << std::endl;
     }
 
     Eigen::Matrix<float, 3, 3, Eigen::RowMajor> positions;

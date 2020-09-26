@@ -35,6 +35,7 @@ struct EGLWrapper : public OpenGLContext {
             EGL_BLUE_SIZE, 8,
             EGL_GREEN_SIZE, 8,
             EGL_RED_SIZE, 8,
+            EGL_ALPHA_SIZE, 8,
             EGL_DEPTH_SIZE, depthBits,
             EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT,
             EGL_NONE

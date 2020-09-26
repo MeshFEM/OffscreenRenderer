@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/eigen.h>
 #include <pybind11/stl.h>
+#include <pybind11/iostream.h>
 
 #include "../Shader.hh"
 #include "../OpenGLContext.hh"
@@ -23,6 +24,7 @@ struct MetaMap<F, T, Ts...> {
     template<typename... Args>
     static void run(Args &&... args) {
         F<T>::run(std::forward<Args>(args)...);
+        MetaMap<F, Ts...>::run(std::forward<Args>(args)...);
     }
 };
 
@@ -54,6 +56,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         .def("enable",      &OpenGLContext::enable,   py::arg("capability"))
         .def("clear",       &OpenGLContext::clear,    py::arg("color") = Eigen::Vector3f::Zero())
         .def("writePPM",    &OpenGLContext::writePPM, py::arg("path"))
+        .def("writePNG",    &OpenGLContext::writePNG, py::arg("path"))
         .def_property_readonly("width",  &OpenGLContext::getWidth)
         .def_property_readonly("height", &OpenGLContext::getHeight)
         ;
@@ -61,7 +64,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
     bindGLEnum(m);
 
     py::class_<Uniform>(m, "Uniform")
-        .def_readonly("index", &Uniform::index)
+        .def_readonly("loc",   &Uniform::loc)
         .def_readonly("size",  &Uniform::size)
         .def_readonly("name",  &Uniform::name)
         .def_property_readonly("type", [](const Uniform &u) { return wrapGLenum(u.type); })
@@ -69,17 +72,17 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         ;
 
     py::class_<Attribute>(m, "Attribute")
-        .def_readonly("index", &Attribute::index)
+        .def_readonly("loc",   &Attribute::loc)
         .def_readonly("size",  &Attribute::size)
         .def_readonly("name",  &Attribute::name)
         .def_property_readonly("type", [](const Attribute &a) { return wrapGLenum(a.type); })
-        .def("__repr__", [](const Attribute &a) { return "Attribute " + std::to_string(a.index) + " ('" + a.name + "'): " + getGLenumRepr(a.type); })
+        .def("__repr__", [](const Attribute &a) { return "Attribute " + std::to_string(a.loc) + " ('" + a.name + "'): " + getGLenumRepr(a.type); })
         ;
 
     py::class_<Shader> pyShader(m, "Shader");
     pyShader
-        .def(py::init<const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"))
-        .def(py::init<const std::string &, const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"), py::arg("geo"))
+        .def(py::init<const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"), py::call_guard<py::scoped_ostream_redirect, py::scoped_estream_redirect>())
+        .def(py::init<const std::string &, const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"), py::arg("geo"), py::call_guard<py::scoped_ostream_redirect, py::scoped_estream_redirect>())
         .def("use", &Shader::use)
         .def_property_readonly("uniforms",   &Shader::getUniforms,   py::return_value_policy::reference)
         .def_property_readonly("attributes", &Shader::getAttributes, py::return_value_policy::reference)

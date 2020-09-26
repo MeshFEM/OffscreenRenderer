@@ -48,33 +48,40 @@ private:
 };
 
 struct Uniform {
-    Uniform(GLuint prog, GLuint idx) : index(idx) {
+    Uniform(GLuint prog, GLuint index) {
         std::array<char, 512> buf;
-        glGetActiveUniform(prog, idx, 512, NULL, &size, &type, buf.data());
+        glGetActiveUniform(prog, index, 512, NULL, &size, &type, buf.data());
         name = std::string(buf.data());
+        loc = glGetUniformLocation(prog, buf.data()); // Can differ from index!!!
+        if (loc < 0) throw std::logic_error("Couldn't look up uniform location");
     }
 
     template<typename T>
     void set(const T &val) {
         using Traits = GLTypeTraits<T>;
         if (Traits::type != type) throw std::runtime_error("Uniform type mismatch");
-        detail::setUniform(index, val);
+        detail::setUniform(loc, val);
+        isSet = true;
     }
 
-    GLuint index;
+    GLint loc;
     GLint size;
     GLenum type;
     std::string name;
+    bool isSet = false;
 };
 
 struct Attribute {
-    Attribute(GLuint prog, GLuint idx) : index(idx) {
+    Attribute(GLuint prog, GLuint index) {
         std::array<char, 512> buf;
-        glGetActiveAttrib(prog, idx, 512, NULL, &size, &type, buf.data());
+        glGetActiveAttrib(prog, index, 512, NULL, &size, &type, buf.data());
         name = std::string(buf.data());
+
+        loc = glGetAttribLocation(prog, buf.data()); // Can differ from index!!!
+        if (loc < 0) throw std::logic_error("Couldn't look up attribute location");
     }
 
-    GLuint index;
+    GLint loc;
     GLint size;
     GLenum type;
     std::string name;
@@ -160,12 +167,19 @@ struct Shader {
         for (Uniform &u : m_uniforms) {
             if (u.name == name) {
                 use();
+                glCheckError("pre setUniform");
                 u.set(val);
                 glCheckError("setUniform");
                 return;
             }
         }
         throw std::runtime_error("Uniform not present: " + name);
+    }
+
+    bool allUniformsSet() const {
+        for (const Uniform &u : m_uniforms)
+            if (!u.isSet) return false;
+        return true;
     }
 
     const std::vector<Uniform>   &getUniforms  () const { return m_uniforms; }
