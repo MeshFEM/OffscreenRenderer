@@ -47,21 +47,30 @@ struct BindSetConstAttribute {
 #include "py_gl_enum.inl"
 
 PYBIND11_MODULE(_offscreen_renderer, m) {
+    bindGLEnum(m);
+
     py::class_<OpenGLContext>(m, "OpenGLContext")
         .def(py::init(&OpenGLContext::construct), py::arg("width"), py::arg("height"))
         .def("resize", &OpenGLContext::resize,    py::arg("width"), py::arg("height"))
         .def("makeCurrent", &OpenGLContext::makeCurrent)
         .def("finish",      &OpenGLContext::finish)
         .def("buffer",      &OpenGLContext::buffer)
-        .def("enable",      &OpenGLContext::enable,   py::arg("capability"))
+        .def("unpremultipliedBuffer", &OpenGLContext::unpremultipliedBuffer)
+        .def("enable",      [](OpenGLContext &ctx, GLenumWrapper cap) { ctx. enable(unwrapGLenum(cap)); }, py::arg("capability"))
+        .def("disable",     [](OpenGLContext &ctx, GLenumWrapper cap) { ctx.disable(unwrapGLenum(cap)); }, py::arg("capability"))
+        .def("blendFunc",   [](OpenGLContext &ctx, GLenumWrapper sf, GLenumWrapper df) {
+                ctx.blendFunc(unwrapGLenum(sf), unwrapGLenum(df)); }, py::arg("sfactor"), py::arg("dfactor"))
+        .def("blendFunc",   [](OpenGLContext &ctx, GLenumWrapper sf, GLenumWrapper df, GLenumWrapper asf, GLenumWrapper adf) {
+                ctx.blendFunc(unwrapGLenum( sf), unwrapGLenum( df),
+                              unwrapGLenum(asf), unwrapGLenum(adf)); }, py::arg("sfactor"), py::arg("dfactor"), py::arg("alpha_sfactor"), py::arg("alpha_dfactor"))
+        .def("cullFace",    [](OpenGLContext &ctx, GLenumWrapper face) {
+                ctx.cullFace(unwrapGLenum(face)); }, py::arg("face") = GLenumWrapper::wGL_BACK)
         .def("clear",       &OpenGLContext::clear,    py::arg("color") = Eigen::Vector3f::Zero())
-        .def("writePPM",    &OpenGLContext::writePPM, py::arg("path"))
-        .def("writePNG",    &OpenGLContext::writePNG, py::arg("path"))
+        .def("writePPM",    &OpenGLContext::writePPM, py::arg("path"), py::arg("unpremultiply") = true)
+        .def("writePNG",    &OpenGLContext::writePNG, py::arg("path"), py::arg("unpremultiply") = true)
         .def_property_readonly("width",  &OpenGLContext::getWidth)
         .def_property_readonly("height", &OpenGLContext::getHeight)
         ;
-
-    bindGLEnum(m);
 
     py::class_<Uniform>(m, "Uniform")
         .def_readonly("loc",   &Uniform::loc)

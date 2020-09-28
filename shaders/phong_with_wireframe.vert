@@ -9,20 +9,12 @@ layout (location = 1) in vec3  v_normal;   // bind v_normal   to attribute 1
 layout (location = 2) in vec4  v_color;    // bind v_color    to attribute 2
 layout (location = 3) in float v_height;   // Height of this vertex above the opposte edge (needed for wireframe)
 
+// Transformation matrices
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform mat3 normalMatrix;
 
-// Light and material parameters
-uniform vec3 lightEyePos;
-uniform vec3 diffuseIntensity;
-uniform vec3 ambientIntensity;
-uniform vec3 specularIntensity;
-uniform float shininess;
-uniform float alpha;    // Transparency
-
-uniform float lineWidth;
-
+// Vertex shader outputs
 out vec3 v2f_eyePos;
 out vec3 v2f_eyeNormal;
 out vec4 v2f_color;
