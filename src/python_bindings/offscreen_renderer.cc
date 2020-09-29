@@ -3,9 +3,9 @@
 #include <pybind11/stl.h>
 #include <pybind11/iostream.h>
 
-#include "../Shader.hh"
-#include "../OpenGLContext.hh"
-#include "../Buffers.hh"
+#include <OffscreenRenderer/Shader.hh>
+#include <OffscreenRenderer/OpenGLContext.hh>
+#include <OffscreenRenderer/Buffers.hh>
 
 namespace py = pybind11;
 

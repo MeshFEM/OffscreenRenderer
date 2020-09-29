@@ -83,10 +83,10 @@ struct OpenGLContext {
         glCheckError("cull face");
     }
 
-	void finish() {
+    void finish() {
         glFinish();
         m_readImage();
-	}
+    }
 
     void blendFunc(GLenum sfactor, GLenum dfactor) { blendFunc(sfactor, dfactor, sfactor, dfactor); }
     void blendFunc(GLenum sfactor, GLenum dfactor, GLenum alpha_sfactor, GLenum alpha_dfactor) {

@@ -95,7 +95,7 @@ private:
 
         m_makeCurrent();
 
-		// Initialize GLEW entry points for our new context
+        // Initialize GLEW entry points for our new context
         m_glewInit();
     }
 

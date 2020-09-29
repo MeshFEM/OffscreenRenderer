@@ -34,7 +34,7 @@ struct OSMesaWrapper : public OpenGLContext {
 
         m_makeCurrent();
 
-		// Initialize GLEW entry points for our new context
+        // Initialize GLEW entry points for our new context
         glewExperimental=GL_TRUE;
         m_glewInit();
     }

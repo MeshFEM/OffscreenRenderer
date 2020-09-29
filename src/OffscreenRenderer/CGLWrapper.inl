@@ -45,14 +45,14 @@ struct CGLWrapper : public OpenGLContext {
             CGLDestroyPixelFormat(pix);
         }
 
-		// std::cout << "Initialize CGL " << m_ctx << std::endl;
+        // std::cout << "Initialize CGL " << m_ctx << std::endl;
 
         m_makeCurrent();
 
         std::cout << glGetString(GL_VERSION) << std::endl;
 
-		// Initialize GLEW entry points for our new context
-		m_glewInit();
+        // Initialize GLEW entry points for our new context
+        m_glewInit();
 
         glGenFramebuffers(1,  &m_frameBufferID);
         glGenRenderbuffers(1, &m_renderBufferID);
@@ -79,7 +79,7 @@ struct CGLWrapper : public OpenGLContext {
 
 private:
     virtual void m_makeCurrent() override {
-		// std::cout << "Make current CGL " << m_ctx << std::endl;
+        // std::cout << "Make current CGL " << m_ctx << std::endl;
         CGLError errorCode = CGLSetCurrentContext(m_ctx);
         if (errorCode != kCGLNoError)
             throw std::runtime_error("CGLSetCurrentContext failure");
