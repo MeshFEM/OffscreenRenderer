@@ -77,6 +77,8 @@ class MeshRenderer:
         self.specularIntensity = 1.0 * white
         self.shininess         = 20.0
 
+        self.transparentBackground = True
+
     def _validateSizes(self, V, F, N, color):
         """ Side effect: update constColor """
         ccolor = len(color.ravel()) in [3, 4]
@@ -213,7 +215,8 @@ class MeshRenderer:
         # for each incident triangle.
         if self.lineWidth != 0: self.replicatePerCorner()
 
-        if clear: self.ctx.clear(np.zeros(4))
+        if clear:
+            self.ctx.clear(np.zeros(4) if self.transparentBackground else np.ones(4))
 
         self.ctx. enable(GLenum.GL_DEPTH_TEST)
         self.ctx.disable(GLenum.GL_CULL_FACE)
