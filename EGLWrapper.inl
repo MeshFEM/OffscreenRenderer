@@ -100,9 +100,9 @@ private:
     }
 
     EGLDisplay m_display = nullptr;
-    EGLConfig  m_config = nullptr;
-    EGLSurface m_surf = nullptr;
-    EGLContext m_ctx = nullptr;
+    EGLConfig  m_config  = nullptr;
+    EGLSurface m_surf    = nullptr;
+    EGLContext m_ctx     = nullptr;
 };
 
 #endif /* end of include guard: EGLWRAPPER_HH */

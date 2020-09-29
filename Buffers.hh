@@ -111,7 +111,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         size_t numChecked = 0;
         for (const auto &attr : s.getAttributes()) {
             if (m_attributes.count(attr.loc)) ++numChecked;
-            else if (attr.name.substr(0, 3) != "gl_") { // Ignore auto-generated attributes like gl_VertexID
+            else if (!attr.isBuiltIn) { // Ignore auto-generated attributes like gl_VertexID
                 throw std::runtime_error("Attribute " + std::to_string(attr.loc) + " (" + attr.name + ") is not set in VAO");
             }
         }

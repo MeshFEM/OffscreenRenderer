@@ -78,13 +78,15 @@ struct Attribute {
         name = std::string(buf.data());
 
         loc = glGetAttribLocation(prog, buf.data()); // Can differ from index!!!
-        if (loc < 0) throw std::logic_error("Couldn't look up attribute location");
+        isBuiltIn = name.substr(0, 3) == "gl_"; // Some drivers apparently don't assign built-in attributes like gl_VertexID valid locations
+        if (!isBuiltIn && (loc < 0)) throw std::logic_error("Couldn't look up attribute location for " + name);
     }
 
     GLint loc;
     GLint size;
     GLenum type;
     std::string name;
+    bool isBuiltIn;
 };
 
 // Resource for a GLSL Shader
