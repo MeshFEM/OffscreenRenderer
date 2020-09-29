@@ -32,11 +32,14 @@ void main() {
     vec3 R = reflect(-L, N);
     float d = max(dot(L, N), 0.0);
 
-    vec4 color = v2f_color * vec4(ambientIntensity + d * diffuseIntensity
-               + (float(d != 0.0) * pow(max(dot(R, V), 0.0), shininess)) * specularIntensity, alpha);
+    vec4 color = v2f_color * vec4(ambientIntensity + d * diffuseIntensity, alpha);
+    if (d != 0.0) color.rgb += pow(max(dot(R, V), 0.0), shininess) * specularIntensity; // Use white specular highlights regardless of material's color
 
     // Draw a black wireframe if requested
     if (lineWidth > 0.0) {
+        // Clamp now so that the wireframe antialiasing doesn't get blown out.
+        color = clamp(color, 0.0, 1.0);
+
         // Trick for implementing "Single-pass Wireframe Rendering" method without a geometry shader:
         // infer height above each triangle edge using (norms of) barycentrentric coordinate gradients.
         vec3 h = v2f_barycentric / sqrt(pow(dFdx(v2f_barycentric), vec3(2.0)) + pow(dFdy(v2f_barycentric), vec3(2.0)));

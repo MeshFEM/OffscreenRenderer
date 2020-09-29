@@ -3,6 +3,7 @@ a.out
 *.so
 *.ppm
 *.png
+*.mp4
 build
 build_debug
 __pycache__

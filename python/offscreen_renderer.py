@@ -3,6 +3,7 @@ from _offscreen_renderer import *
 import os
 import numpy as np
 import scipy.spatial
+import video_writer
 
 SHADER_DIR = os.path.dirname(__file__) + '/../shaders'
 
@@ -40,9 +41,6 @@ class OpenGLContext(_offscreen_renderer.OpenGLContext):
         if ext == 'png': self.writePNG(path, unpremultiply)
         if ext == 'ppm': self.writePPM(path, unpremultiply)
 
-    def renderMeshNonIndexed(self, V, N, *args, **kwargs):
-        self.renderMesh(V, None, N, *args, **kwargs)
-
     def shaderLibrary(self):
         if not hasattr(self, '_shaderLib'):
             self._shaderLib = ShaderLibrary()
@@ -52,9 +50,6 @@ class OpenGLContext(_offscreen_renderer.OpenGLContext):
         if (hasattr(self, '_shaderLib')):
             self.makeCurrent() # Make sure shader deletion is acting on this context's shaders!!!
             del self._shaderLib
-
-
-#    def renderMesh(self, V, F, N, color, matProjection, matModelView, lightEyePos, diffuseIntensity, ambientIntensity, specularIntensity=np.zeros(3), shininess=10.0, lineWidth = 0.0, alpha = 1.0, wireframeColor):
 
 class MeshRenderer:
     def __init__(self, width, height):
@@ -247,8 +242,18 @@ class MeshRenderer:
         self.shader.setUniform('wireframeColor',    self.lineColor)
         self.vao.draw(self.shader)
 
-    def image(self      ): return self.ctx.image()
-    def  save(self, path): return self.ctx.save(path)
+    def array(self      ): return self.ctx.array(     unpremultiply=self.transparentBackground)
+    def image(self      ): return self.ctx.image(     unpremultiply=self.transparentBackground)
+    def  save(self, path): return self.ctx.save(path, unpremultiply=self.transparentBackground)
+
+    def renderAnimation(self, outPath, nframes, frameCallback, *videoWriterArgs, **videoWriterKWargs):
+        """
+        Write an animation out as a video/image sequence, where each frame is set up by `frameCallback`
+        """
+        vw = video_writer.MeshRendererVideoWriter(outPath, self, *videoWriterArgs, **videoWriterKWargs)
+        for frame in range(nframes):
+            frameCallback(self, frame)
+            vw.writeFrame()
 
     def __del__(self):
         self.shader = None # Must happen first!
