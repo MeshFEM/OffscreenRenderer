@@ -35,7 +35,7 @@ target_include_directories(offscreen_renderer INTERFACE ${EIGEN3_INCLUDE_DIR})
 
 find_package(GLEW REQUIRED)
 target_link_libraries(offscreen_renderer INTERFACE GLEW::GLEW ${OPENGL_LIBRARIES})
-target_compile_options(offscreen_renderer INTERFACE -Wno-deprecated-declarations)
+target_compile_options(offscreen_renderer INTERFACE -Wno-deprecated-declarations -march=native -ffast-math)
 
 find_package(PNG REQUIRED)
 target_link_libraries(offscreen_renderer INTERFACE PNG::PNG)

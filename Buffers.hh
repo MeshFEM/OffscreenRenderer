@@ -24,14 +24,14 @@ struct BufferObject : RAIIGLResource<BufferObject> {
     using Base::id;
 
     BufferObject() { }
-    BufferObject(Eigen::Ref<const MXfR > A) { glGenBuffers(1, &id); this->m_validateConstruction(); setData(A); }
-    BufferObject(Eigen::Ref<const MXuiR> A) { glGenBuffers(1, &id); this->m_validateConstruction(); setData(A); }
+    BufferObject(Eigen::Ref<const MXfR > A) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
+    BufferObject(Eigen::Ref<const MXuiR> A) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
 
     void bind(GLenum target) const { glBindBuffer(target, id); }
 
     template<class Derived>
-    void setData(const Eigen::MatrixBase<Derived> &A,
-                 GLenum usage = GL_DYNAMIC_DRAW) { // In our typical use cases, buffers may change every frame...
+    void updateData(const Eigen::MatrixBase<Derived> &A,
+                    GLenum usage = GL_DYNAMIC_DRAW) { // In our typical use cases, buffers may change every frame...
         bind(GL_ARRAY_BUFFER);
         glBufferData(GL_ARRAY_BUFFER,
                      A.size() * sizeof(typename Derived::Scalar),
@@ -57,12 +57,15 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         this->m_validateConstruction();
     }
 
+    // Create/update a buffer with data for attribute `loc`.
     // Each row of A is interpreted as a vertex attribute,
     // so A's column size determines the attribute size.
     void setAttribute(int loc, Eigen::Ref<const MXfR> A) {
-        bind(); // Bind this VAO to modify it
-        m_attributes[loc] = BufferObject(A);
-        auto &buf = m_attributes[loc];
+        bind();
+        auto it = m_attributes.find(loc);
+        if (it == m_attributes.end()) it = m_attributes.emplace(loc, BufferObject(A)).first;
+        else                          it->second.updateData(A);
+        auto &buf = it->second;
         buf.bind(GL_ARRAY_BUFFER);
         glVertexAttribPointer(loc,
                               A.cols(), GL_FLOAT, // # cols floats per vertex
@@ -76,7 +79,10 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
     template<typename T>
     void setConstantAttribute(int loc, const T &a) {
         bind();
-        m_attributes[loc] = BufferObject(); // Empty dummy attribute -- we need to set this to pass the validation in `draw`
+        if (m_attributes.count(loc) == 0) {
+            // Create a dummy, empty attribute to satisfy validation in `draw`
+            m_attributes[loc] = BufferObject(); 
+        }
 
         glDisableVertexAttribArray(GLuint(loc));
         detail::setAttribute(GLuint(loc), a);
@@ -85,16 +91,17 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
     }
 
     void setIndexBuffer(Eigen::Ref<const MXuiR> A) {
-        bind(); // Bind this VAO to modify it
-        m_indexBuffer = BufferObject(A);
+        bind();
+        Eigen::Map<const Eigen::Matrix<unsigned int, Eigen::Dynamic, 1>> flatA(A.data(), A.size());
+        if (m_indexBuffer.allocated()) m_indexBuffer.updateData(flatA);
+        else  m_indexBuffer = BufferObject(flatA);
         m_indexBuffer.bind(GL_ELEMENT_ARRAY_BUFFER);
         glCheckError();
     }
 
     void unsetIndexBuffer() {
-        bind(); // Bind this VAO to modify it
+        bind();
         m_indexBuffer = BufferObject();
-        m_indexBuffer.bind(GL_ELEMENT_ARRAY_BUFFER);
         glCheckError();
     }
 

@@ -97,25 +97,46 @@ struct OpenGLContext {
 
     const ImageBuffer &buffer() const { return m_buffer; }
 
-    ImageBuffer unpremultipliedBuffer() const {
+    const ImageBuffer unpremultipliedBuffer() const {
         // For transparent images, the render output has a "premultiplied alpha"
         // (i.e., the color components are scaled by the alpha component, and
         // the image has already effectively been composited against a black background).
         // We must divide by the alpha channel before saving.
+#if 0
         const int numPixels = m_width * m_height;
-        Eigen::ArrayXf colorScale = MapConstCmpnt(m_buffer.data() + 3, numPixels).cast<float>() / 255.0;
-        colorScale = (colorScale != 0.0).select(1.0 / colorScale, colorScale);
+        MapConstCmpnt alpha(m_buffer.data() + 3, numPixels);
+        Eigen::ArrayXf colorScale = (alpha != 0).select(255.0f / alpha.cast<float>(), 1.0f);
 
-        ImageBuffer result(m_buffer.size());
-        MapColor(result.data(),     numPixels, 3) = ((MapConstColor(m_buffer.data(), numPixels, 3).cast<float>().colwise() * colorScale).round()).cast<unsigned char>();
-        MapCmpnt(result.data() + 3, numPixels, 1) = MapConstCmpnt(m_buffer.data() + 3, numPixels, 1);
+        // ImageBuffer result(m_buffer.size());
+        // MapColor(result.data(),     numPixels, 3) = ((MapConstColor(m_buffer.data(), numPixels, 3).cast<float>().colwise() * colorScale).round()).cast<unsigned char>();
+        // MapCmpnt(result.data() + 3, numPixels, 1) = alpha;
+        // MapColor(result.data(), numPixels, 3) = (MapColor(result.data(), numPixels, 3).cast<float>().colwise() * colorScale).cast<unsigned char>();
 
-        // MapColor(result.data()    , numPixels, 3) = MapConstColor(m_buffer.data()    , numPixels, 3);
-        // MapCmpnt(result.data() + 3, numPixels, 1) = MapConstCmpnt(m_buffer.data() + 3, numPixels, 1);
+        // Surpisingly this appears to be the fastest Eigen implementation
+        ImageBuffer result(m_buffer);
+        MapCmpnt(result.data() + 0, numPixels) = (MapCmpnt(result.data() + 0, numPixels).cast<float>() * colorScale).round().cast<unsigned char>();
+        MapCmpnt(result.data() + 1, numPixels) = (MapCmpnt(result.data() + 1, numPixels).cast<float>() * colorScale).round().cast<unsigned char>();
+        MapCmpnt(result.data() + 2, numPixels) = (MapCmpnt(result.data() + 2, numPixels).cast<float>() * colorScale).round().cast<unsigned char>();
 
-        // std::cout << "unpremultipliedBuffer: " << result.head(10).transpose().cast<int>() << std::endl;
-        // std::cout << "Result size: " << result.size() << std::endl;
-
+        // ImageBuffer result(m_buffer.size());
+        // MapCmpnt(result.data() + 0, numPixels) = (MapConstCmpnt(m_buffer.data() + 0, numPixels).cast<float>() * colorScale).round().cast<unsigned char>();
+        // MapCmpnt(result.data() + 1, numPixels) = (MapConstCmpnt(m_buffer.data() + 1, numPixels).cast<float>() * colorScale).round().cast<unsigned char>();
+        // MapCmpnt(result.data() + 2, numPixels) = (MapConstCmpnt(m_buffer.data() + 2, numPixels).cast<float>() * colorScale).round().cast<unsigned char>();
+        // MapCmpnt(result.data() + 3, numPixels) =  MapConstCmpnt(m_buffer.data() + 3, numPixels);
+#else
+        // More cache friendly, direct implementation (somehow ~20x faster than the fastest Eigen variant above!)
+        ImageBuffer result = m_buffer;
+        unsigned char *end = result.data() + m_buffer.size();
+        for (unsigned char *pixel = result.data(); pixel != end; pixel += 4) {
+            // const unsigned char alpha_uchar = pixel[3] == 0 ? 1 : pixel[3];
+            // float scale = 255.0f / alpha_uchar;
+            const unsigned char alpha_uchar = pixel[3];
+            float scale = (alpha_uchar == 0) ? 1.0f : 255.0f / alpha_uchar;
+            pixel[0] = (unsigned char) (float(pixel[0]) * scale + 0.5f);
+            pixel[1] = (unsigned char) (float(pixel[1]) * scale + 0.5f);
+            pixel[2] = (unsigned char) (float(pixel[2]) * scale + 0.5f);
+        }
+#endif
         return result;
     }
 

@@ -54,7 +54,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
         .def("resize", &OpenGLContext::resize,    py::arg("width"), py::arg("height"))
         .def("makeCurrent", &OpenGLContext::makeCurrent)
         .def("finish",      &OpenGLContext::finish)
-        .def("buffer",      &OpenGLContext::buffer)
+        .def("buffer",                &OpenGLContext::buffer,                py::return_value_policy::reference)
         .def("unpremultipliedBuffer", &OpenGLContext::unpremultipliedBuffer)
         .def("enable",      [](OpenGLContext &ctx, GLenumWrapper cap) { ctx. enable(unwrapGLenum(cap)); }, py::arg("capability"))
         .def("disable",     [](OpenGLContext &ctx, GLenumWrapper cap) { ctx.disable(unwrapGLenum(cap)); }, py::arg("capability"))
@@ -102,15 +102,15 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
 
     py::class_<BufferObject>(m, "BufferObject")
         .def("bind", &BufferObject::bind)
-        .def("setData", [](BufferObject &b, Eigen::Ref<const MXfR > data, GLenumWrapper usage) { b.setData(data, unwrapGLenum(usage)); }, py::arg("data"), py::arg("usage") = GLenumWrapper::wGL_DYNAMIC_DRAW)
-        .def("setData", [](BufferObject &b, Eigen::Ref<const MXuiR> data, GLenumWrapper usage) { b.setData(data, unwrapGLenum(usage)); }, py::arg("data"), py::arg("usage") = GLenumWrapper::wGL_DYNAMIC_DRAW)
+        .def("updateData", [](BufferObject &b, Eigen::Ref<const MXfR > data, GLenumWrapper usage) { b.updateData(data, unwrapGLenum(usage)); }, py::arg("data"), py::arg("usage") = GLenumWrapper::wGL_DYNAMIC_DRAW)
+        .def("updateData", [](BufferObject &b, Eigen::Ref<const MXuiR> data, GLenumWrapper usage) { b.updateData(data, unwrapGLenum(usage)); }, py::arg("data"), py::arg("usage") = GLenumWrapper::wGL_DYNAMIC_DRAW)
         ;
 
     py::class_<VertexArrayObject> pyVAO(m, "VertexArrayObject");
     pyVAO
         .def(py::init<>())
-        .def("setAttribute",   &VertexArrayObject::setAttribute,   py::arg("index"), py::arg("A"))
-        .def("setIndexBuffer", &VertexArrayObject::setIndexBuffer, py::arg("A"))
+        .def("setAttribute",    &VertexArrayObject::setAttribute,    py::arg("index"), py::arg("A"))
+        .def("setIndexBuffer",  &VertexArrayObject::setIndexBuffer,  py::arg("A"))
         .def("bind", &VertexArrayObject::bind)
         .def("draw", &VertexArrayObject::draw, py::arg("shader"))
         .def_property_readonly("attributeBuffers", &VertexArrayObject::attributeBuffers, py::return_value_policy::reference)
