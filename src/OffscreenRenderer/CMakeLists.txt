@@ -1,14 +1,20 @@
 add_library(offscreen_renderer INTERFACE)
 target_include_directories(offscreen_renderer INTERFACE ..)
 
-find_package(Eigen3 REQUIRED)
-target_include_directories(offscreen_renderer INTERFACE ${EIGEN3_INCLUDE_DIR})
+if (NOT TARGET Eigen3::Eigen)
+    find_package(Eigen3 REQUIRED)
+endif()
+target_link_libraries(offscreen_renderer INTERFACE Eigen3::Eigen)
 
-find_package(GLEW REQUIRED)
+if (NOT TARGET GLEW::GLEW)
+    find_package(GLEW REQUIRED)
+endif()
 target_link_libraries(offscreen_renderer INTERFACE GLEW::GLEW ${OPENGL_LIBRARIES})
 target_compile_options(offscreen_renderer INTERFACE -Wno-deprecated-declarations -march=native -ffast-math)
 
-find_package(PNG REQUIRED)
+if (NOT TARGET PNG::PNG)
+    find_package(PNG REQUIRED)
+endif()
 target_link_libraries(offscreen_renderer INTERFACE PNG::PNG)
 
 if (USE_OSMESA)

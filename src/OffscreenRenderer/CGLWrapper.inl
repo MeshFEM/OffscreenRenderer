@@ -26,7 +26,7 @@ struct CGLWrapper : public OpenGLContext {
         CGLPixelFormatAttribute pixAttributes[12] = {
             kCGLPFAAccelerated,   // Presence of boolean flags implies `true` value according to documentation
             kCGLPFAOpenGLProfile, CGLPixelFormatAttribute(kCGLOGLPVersion_3_2_Core), // Uses latest available version (not actually 3.2!!)
-            kCGLPFADepthSize,     CGLPixelFormatAttribute(24),
+            kCGLPFADepthSize,     CGLPixelFormatAttribute(depthBits),
             kCGLPFAAlphaSize,     CGLPixelFormatAttribute(8),
             kCGLPFAStencilSize,   CGLPixelFormatAttribute(stencilBits),
             kCGLPFAAccumSize,     CGLPixelFormatAttribute(accumBits),

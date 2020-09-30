@@ -98,5 +98,8 @@ class MeshRendererVideoWriter(VideoWriter):
             self.mrenderer.transparentBackground = False
 
     def writeFrame(self):
+        """
+        Render a new frame into the video.
+        """
         self.mrenderer.render(True)
         super().writeFrame(self.mrenderer.array())

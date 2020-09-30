@@ -154,10 +154,9 @@ struct OpenGLContext {
         // Write the RGB components of the image in PPM format.
         // Due to the opposite vertical axis conventions of OpenGL and PPM, the
         // buffer holds a vertically flipped image; we flip it while writing.
-        const size_t npixels = buf.size() / 4;
-        for (size_t row = 0; row < m_height; ++row) {
-            for (size_t col = 0; col < m_width; ++col) {
-                size_t pixel = (m_height - row - 1) * m_width + col;
+        for (int row = 0; row < m_height; ++row) {
+            for (int col = 0; col < m_width; ++col) {
+                int pixel = (m_height - row - 1) * m_width + col;
                 outFile.write((const char *) &buf[4 * pixel], 3);
             }
         }

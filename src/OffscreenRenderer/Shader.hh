@@ -43,7 +43,7 @@ struct ShaderObject : RAIIGLResource<ShaderObject> {
         glCheckError("shader compilation");
     }
 private:
-    friend class RAIIGLResource<ShaderObject>;
+    friend struct RAIIGLResource<ShaderObject>;
     void m_delete() { glDeleteShader(id); /* std::cout << "Deleted shader " << id << std::endl; */ }
 };
 
@@ -97,7 +97,7 @@ struct Shader {
         Program() : Base(glCreateProgram()) { this->m_validateConstruction(); }
 
     private:
-        friend class RAIIGLResource<Program>;
+        friend struct RAIIGLResource<Program>;
         void m_delete() { glDeleteProgram(id); /* std::cout << "Deleted program " << id << std::endl; */ }
     };
 

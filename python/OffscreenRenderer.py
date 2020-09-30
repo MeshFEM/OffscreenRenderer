@@ -1,4 +1,6 @@
-import _offscreen_renderer
+try:    import _offscreen_renderer
+except: raise Exception('Could not load compiled module; is OffscreenRenderer missing a dependency?')
+
 from _offscreen_renderer import *
 import os
 import numpy as np
@@ -51,6 +53,14 @@ class OpenGLContext(_offscreen_renderer.OpenGLContext):
             self.makeCurrent() # Make sure shader deletion is acting on this context's shaders!!!
             del self._shaderLib
 
+def hexColorToFloat(c):
+    """
+    Pythreejs likes using hex color strings like #FFFFFF; convert
+    them to OpenGL-compatible float arrays.
+    """
+    if not isinstance(c, str) or (len(c) != 7): raise Exception('Invalid hex color')
+    return np.array([int(c[i:i+2], 16) / 255 for i in range(1, len(c), 2)])
+
 class MeshRenderer:
     def __init__(self, width, height):
         self.ctx = OpenGLContext(width, height)
@@ -74,14 +84,18 @@ class MeshRenderer:
 
         self.transparentBackground = True
 
+        # The triangle index array in active use to replicate vertex data to
+        # per-corner data.
+        self._activeReplicationIndices = None
+
     def _validateSizes(self, V, F, N, color):
         """ Side effect: update constColor """
-        ccolor = len(color.ravel()) in [3, 4]
+        ccolor = isinstance(color, str) or len(np.ravel(color)) in [3, 4] # `str` case probably corresponds to RGB hex code '#FFFFFF'
         self.constColor = ccolor
         nv = self.numVertices
-        if len(V) != nv:                      raise Exception('Unexpected vertex array size (use setMesh if changing connectivity)')
-        if len(N) != nv:                      raise Exception('Unexpected normal array size (must be per-vertex)')
-        if not ccolor and (len(color) != nv): raise Exception('Unexpected `color` size (must be per-vertex or constant)')
+        if len(V) != nv:                      raise Exception(f'Unexpected vertex array size {len(V)} vs {nv} (use setMesh if changing connectivity)')
+        if len(N) != nv:                      raise Exception(f'Unexpected normal array size {len(N)} vs {nv} (must be per-vertex)')
+        if not ccolor and (len(color) != nv): raise Exception(f'Unexpected `color` size {len(N)} vs {nv} (must be per-vertex or constant)')
         if F is not None and F.max() >= nv:   raise Exception('Corner index out of bounds')
 
     def setMesh(self, V, F, N, color):
@@ -93,6 +107,7 @@ class MeshRenderer:
         self.numVertices = len(V)
         self._validateSizes(V, F, N, color)
         self.F = F
+        self._activeReplicationIndices = None
 
         self.ctx.makeCurrent()
 
@@ -123,13 +138,23 @@ class MeshRenderer:
         self.F = self.F.reshape((-1, 3))[order]
         self.vao.setIndexBuffer(self.F)
 
-    def updateMeshData(self, V, N, color):
+    def updateMeshData(self, V, N, color = None):
         """
         Update the mesh's data without changing its connectivity.
         """
+        if (color is None): color = self.color
         self._validateSizes(V, None, N, color) # updates `self.constColor`
 
-        # Keep track of the vertex data in case it must be replicated per
+        if isinstance(color, str) and len(color) == 7:
+            color = hexColorToFloat(color)
+
+        # Replicate the data to per-corner if in replication mode.
+        if self._activeReplicationIndices is not None:
+            V = V[self._activeReplicationIndices]
+            N = N[self._activeReplicationIndices]
+            if not self.constColor: color = color[self._activeReplicationIndices]
+
+        # Keep track of the vertex data in case it we need to switch to replicating per
         # incident triangle (e.g., for wireframe rendering)
         self.V = V
         self.N = N
@@ -146,6 +171,9 @@ class MeshRenderer:
             self._meshColorOpaque = (color.shape[1] == 3) or (color[:, 3].min() == 1.0)
 
     def lookAt(self, position, target, up):
+        self.cam_position = position
+        self.cam_target   = target
+        self.cam_up       = up
         viewDir = np.array(target) - np.array(position)
         viewDir /= np.linalg.norm(viewDir)
         right   = np.cross(viewDir, up)
@@ -182,6 +210,22 @@ class MeshRenderer:
 
         self._sorted = False # Changing the mesh orientation invalidates its depth sort
 
+    def getCameraParams(self):
+        """
+        Emulate with MeshFEM's TriMeshViewer.getCameraParams. As an unfortunate
+        consequence, the `up` and `target` vectors are swapped wrt the
+        arguments of  `lookAt`
+        """
+        return (self.cam_position, self.cam_up, self.cam_target)
+
+    def setCameraParams(self, params):
+        """
+        Emulate with MeshFEM's TriMeshViewer.setCameraParams. As an unfortunate
+        consequence, the `up` and `target` vectors are swapped wrt the
+        arguments of  `lookAt`
+        """
+        self.lookAt(params[0], params[2], params[1])
+
     def hasPerCornerVtxData(self):
         return (self.F is None) or (len(self.F.ravel()) == self.numVertices)
 
@@ -193,10 +237,12 @@ class MeshRenderer:
         # Note: this operation preserves depth sorting!
         # (And it is more efficient to perform depth sorting first...)
         if self.hasPerCornerVtxData(): return
-        F_flat = self.F.ravel()
-        self.V = self.V[F_flat]
-        self.N = self.N[F_flat]
-        if not constColor: self.color = self.color[F_flat]
+
+        # Switch to replication mode
+        self._activeReplicationIndices = self.F.ravel()
+        self.updateMeshData(self.V, self.N, self.color)
+
+        # Disable the index buffers
         self.F = None
         self.vao.unsetIndexBuffer()
 
@@ -254,6 +300,13 @@ class MeshRenderer:
         for frame in range(nframes):
             frameCallback(self, frame)
             vw.writeFrame()
+
+    def orbitAnimation(self, outPath, nframes, *videoWriterArgs, **videoWriterKWargs):
+        """
+        Render an animation of the camera making a full orbit around the up axis centered at its target.
+        """
+        def c(r, i): r.orbitedLookAt(self.cam_position, self.cam_target, self.cam_up, 2  * np.pi / nframes * i)
+        self.renderAnimation(outPath, nframes, c, *videoWriterArgs, **videoWriterKWargs)
 
     def __del__(self):
         self.shader = None # Must happen first!

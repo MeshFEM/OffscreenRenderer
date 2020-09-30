@@ -43,7 +43,7 @@ struct BufferObject : RAIIGLResource<BufferObject> {
     size_t count() const { return m_count; }
 
 private:
-    friend class RAIIGLResource<BufferObject>;
+    friend struct RAIIGLResource<BufferObject>;
     void m_delete() { glDeleteBuffers(1, &id); }
     size_t m_count = 0;
 };
@@ -126,10 +126,14 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         s.use();
         bind();
 
-        if (m_indexBuffer.allocated())
+        if (m_indexBuffer.allocated()) {
+            std::cout << "glDrawElements (indexed)" << std::endl;
             glDrawElements(GL_TRIANGLES, m_indexBuffer.count(), GL_UNSIGNED_INT, NULL);
-        else
+        }
+        else {
+            std::cout << "glDrawArrays (unindexed)" << std::endl;
             glDrawArrays(GL_TRIANGLES, 0, m_attributes.at(0).count());
+        }
         glCheckError();
     }
 
@@ -139,7 +143,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
 private:
     std::map<int, BufferObject> m_attributes;
     BufferObject m_indexBuffer;
-    friend class RAIIGLResource<VertexArrayObject>;
+    friend struct RAIIGLResource<VertexArrayObject>;
     void m_delete() { glDeleteVertexArrays(1, &id); /* std::cout << "Delete vertex array " << id << std::endl; */ }
 };
 

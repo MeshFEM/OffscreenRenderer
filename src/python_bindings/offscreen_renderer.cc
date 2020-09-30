@@ -16,7 +16,7 @@ struct MetaMap;
 template<template<typename> class F>
 struct MetaMap<F> {
     template<typename... Args>
-    static void run(Args &&... args) { }
+    static void run(Args &&... /* args */) { }
 };
 
 template<template<typename> class F, typename T, typename... Ts>
@@ -109,8 +109,9 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
     py::class_<VertexArrayObject> pyVAO(m, "VertexArrayObject");
     pyVAO
         .def(py::init<>())
-        .def("setAttribute",    &VertexArrayObject::setAttribute,    py::arg("index"), py::arg("A"))
-        .def("setIndexBuffer",  &VertexArrayObject::setIndexBuffer,  py::arg("A"))
+        .def("setAttribute",     &VertexArrayObject::setAttribute,   py::arg("index"), py::arg("A"))
+        .def("setIndexBuffer",   &VertexArrayObject::setIndexBuffer, py::arg("A"))
+        .def("unsetIndexBuffer", &VertexArrayObject::unsetIndexBuffer)
         .def("bind", &VertexArrayObject::bind)
         .def("draw", &VertexArrayObject::draw, py::arg("shader"))
         .def_property_readonly("attributeBuffers", &VertexArrayObject::attributeBuffers, py::return_value_policy::reference)
