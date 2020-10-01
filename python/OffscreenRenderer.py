@@ -58,7 +58,8 @@ def hexColorToFloat(c):
     Pythreejs likes using hex color strings like #FFFFFF; convert
     them to OpenGL-compatible float arrays.
     """
-    if not isinstance(c, str) or (len(c) != 7): raise Exception('Invalid hex color')
+    if not isinstance(c, str): return c
+    if len(c) != 7: raise Exception('Invalid hex color')
     return np.array([int(c[i:i+2], 16) / 255 for i in range(1, len(c), 2)])
 
 class MeshRenderer:
@@ -87,6 +88,9 @@ class MeshRenderer:
         # The triangle index array in active use to replicate vertex data to
         # per-corner data.
         self._activeReplicationIndices = None
+
+    def resize(self, width, height):
+        self.ctx.resize(width, height)
 
     def _validateSizes(self, V, F, N, color):
         """ Side effect: update constColor """
