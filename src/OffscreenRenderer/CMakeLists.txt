@@ -13,7 +13,7 @@ if (NOT USE_OSMESA)
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         find_package(OpenGL REQUIRED)
     else()
-        set(OpenGL_GL_PREFERENCE "LEGACY")
+        set(OpenGL_GL_PREFERENCE "GLVND") # Prefer modern GL driver, silencing cmake warning
         find_package(OpenGL COMPONENTS OpenGL EGL)
     endif()
 endif()
