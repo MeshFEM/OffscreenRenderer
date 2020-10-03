@@ -18,7 +18,9 @@
 #include <string>
 #include <memory>
 
+#if PNG_WRITER
 #include "write_png.h"
+#endif
 #include "GLErrors.hh"
 
 #include <GL/glew.h>
@@ -162,10 +164,12 @@ struct OpenGLContext {
         }
     }
 
+#if PNG_WRITER
     void writePNG(const std::string &path, bool unpremultiply = true) const {
         const ImageBuffer &buf = unpremultiply ? unpremultipliedBuffer() : buffer();
         write_png_RGBA(path, m_width, m_height, buf.data(), /* verticalFlip = */ true);
     }
+#endif
 
     virtual ~OpenGLContext()  { }
 

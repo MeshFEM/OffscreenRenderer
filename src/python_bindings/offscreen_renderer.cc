@@ -67,7 +67,9 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
                 ctx.cullFace(unwrapGLenum(face)); }, py::arg("face") = GLenumWrapper::wGL_BACK)
         .def("clear",       &OpenGLContext::clear,    py::arg("color") = Eigen::Vector3f::Zero())
         .def("writePPM",    &OpenGLContext::writePPM, py::arg("path"), py::arg("unpremultiply") = true)
+#if PNG_WRITER
         .def("writePNG",    &OpenGLContext::writePNG, py::arg("path"), py::arg("unpremultiply") = true)
+#endif
         .def_property_readonly("width",  &OpenGLContext::getWidth)
         .def_property_readonly("height", &OpenGLContext::getHeight)
         ;

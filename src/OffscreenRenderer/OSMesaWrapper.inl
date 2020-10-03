@@ -33,6 +33,7 @@ struct OSMesaWrapper : public OpenGLContext {
         resize(width, height);
 
         m_makeCurrent();
+        std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
 
         // Initialize GLEW entry points for our new context
         glewExperimental=GL_TRUE;
@@ -47,7 +48,6 @@ private:
     virtual void m_makeCurrent() override {
         if (!OSMesaMakeCurrent(m_ctx, m_buffer.data(), GL_UNSIGNED_BYTE, m_width, m_height))
             throw std::runtime_error("OSMesaMakeCurrent failed!");
-        std::cout << glGetString(GL_VERSION) << std::endl;
     }
 
     OSMesaContext m_ctx;

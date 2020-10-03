@@ -19,7 +19,9 @@ mark_as_advanced(OSMESA_INCLUDE_DIR)
 find_library(OSMESA_LIBRARY
   NAMES OSMesa OSMesa16 OSMesa32
   PATHS "${OSMESA_ROOT}/lib"
+        "${OSMESA_ROOT}/lib/x86_64-linux-gnu"
         "$ENV{OSMESA_ROOT}/lib"
+        "$ENV{OSMESA_ROOT}/lib/x86_64-linux-gnu"
         /opt/graphics/OpenGL/lib
         /usr/openwin/lib
   DOC   "OSMesa library")

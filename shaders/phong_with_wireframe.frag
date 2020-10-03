@@ -1,6 +1,6 @@
 // Improved implementation of "Single-Pass Wireframe Rendering" technique.
 // Author:  Julian Panetta (jpanetta), julian.panetta@gmail.com
-#version 150
+#version 140
 
 // Light and material parameters
 uniform vec3 lightEyePos;

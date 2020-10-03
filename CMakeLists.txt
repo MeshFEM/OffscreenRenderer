@@ -13,7 +13,8 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+set(OFFSCREEN_RENDERER_ROOT ${CMAKE_CURRENT_SOURCE_DIR})
+list(APPEND CMAKE_MODULE_PATH ${OFFSCREEN_RENDERER_ROOT}/cmake)
 
 # Configurable options
 option(USE_OSMESA "Use the software rasterization library OSMesa instead of a GPU-accelerated EGL/CGL context" OFF)
@@ -29,4 +30,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 add_subdirectory(src/OffscreenRenderer)
-add_subdirectory(src/python_bindings)
+
+if (TARGET offscreen_renderer)
+    add_subdirectory(src/python_bindings)
+endif()

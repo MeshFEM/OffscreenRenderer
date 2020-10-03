@@ -127,11 +127,11 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         bind();
 
         if (m_indexBuffer.allocated()) {
-            std::cout << "glDrawElements (indexed)" << std::endl;
+            // std::cout << "glDrawElements (indexed)" << std::endl;
             glDrawElements(GL_TRIANGLES, m_indexBuffer.count(), GL_UNSIGNED_INT, NULL);
         }
         else {
-            std::cout << "glDrawArrays (unindexed)" << std::endl;
+            // std::cout << "glDrawArrays (unindexed)" << std::endl;
             glDrawArrays(GL_TRIANGLES, 0, m_attributes.at(0).count());
         }
         glCheckError();
