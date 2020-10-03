@@ -27,7 +27,7 @@ endif()
 
 set(SHADER_PATH ${OFFSCREEN_RENDERER_ROOT}/shaders CACHE PATH "location of shader programs")
 
-if (TARGET GLEW::GLEW AND (TARGET OpenGL::OpenGL OR TARGET OSMesa::OSMesa))
+if ((TARGET GLEW::GLEW) AND (OPENGL_FOUND OR (TARGET OSMesa::OSMesa)))
     add_library(offscreen_renderer INTERFACE)
     target_include_directories(offscreen_renderer INTERFACE ..)
     target_link_libraries (offscreen_renderer INTERFACE Eigen3::Eigen GLEW::GLEW ${OPENGL_LIBRARIES})
