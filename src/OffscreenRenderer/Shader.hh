@@ -156,10 +156,10 @@ struct Shader {
     }
 
     // Factory method to construct from shaders stored in files.
-    static Shader fromFiles(const std::string &vtxFile, const std::string &fragFile, const std::string &geoFile = std::string()) {
+    static std::unique_ptr<Shader> fromFiles(const std::string &vtxFile, const std::string &fragFile, const std::string &geoFile = std::string()) {
         if (geoFile.size())
-            return Shader(readFile(vtxFile), readFile(fragFile), readFile(geoFile));
-        return Shader(readFile(vtxFile), readFile(fragFile));
+            return std::make_unique<Shader>(readFile(vtxFile), readFile(fragFile), readFile(geoFile));
+        return std::make_unique<Shader>(readFile(vtxFile), readFile(fragFile));
     }
 
     void use() const { glUseProgram(m_prog.id); }

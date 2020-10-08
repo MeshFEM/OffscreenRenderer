@@ -30,21 +30,28 @@ struct OSMesaWrapper : public OpenGLContext {
         };
         m_ctx = OSMesaCreateContextAttribs(ctxAttribs, /* sharelist = */ NULL);
         if (!m_ctx) throw std::runtime_error("OSMesaCreateContext failed!");
+
         resize(width, height);
 
-        m_makeCurrent();
-        std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
-
         // Initialize GLEW entry points for our new context
-        glewExperimental=GL_TRUE;
+        // (The call to glViewport made by `resize` above should be OK as it is
+        //  part of OpenGL 1.0 and therefore not managed by GLEW.)
         m_glewInit();
+        std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
     }
 
-    ~OSMesaWrapper() {
+    virtual ~OSMesaWrapper() {
         OSMesaDestroyContext(m_ctx);
     }
 
 private:
+    virtual void m_resizeImpl(int /* width */, int /* height */) override {
+         // This is called after the buffer, m_width, and m_height are
+         // initialized/updated but before the glViewport call--the exact time
+         // we can and need to make this context current.
+         makeCurrent();
+    }
+
     virtual void m_makeCurrent() override {
         if (!OSMesaMakeCurrent(m_ctx, m_buffer.data(), GL_UNSIGNED_BYTE, m_width, m_height))
             throw std::runtime_error("OSMesaMakeCurrent failed!");

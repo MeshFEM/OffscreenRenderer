@@ -48,7 +48,7 @@ struct EGLWrapper : public OpenGLContext {
         std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
     }
 
-    ~EGLWrapper() {
+    virtual ~EGLWrapper() {
         m_destroy_size_specific();
         eglTerminate(m_display);
     }

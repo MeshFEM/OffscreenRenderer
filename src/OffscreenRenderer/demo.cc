@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
     ctx->makeCurrent();
 
     auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
-    for (const auto &u : shader.getUniforms()) {
+    for (const auto &u : shader->getUniforms()) {
         std::cout << "Uniform " << u.loc << ": " << u.name << std::endl;
     }
 
@@ -53,13 +53,13 @@ int main(int argc, char *argv[])
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
-        vao.draw(shader);
+        vao.draw(*shader);
     });
 
     ctx->finish();
 
     if (filename)
-        ctx->writePPM(filename);
+        ctx->writePNG(filename);
 
     return 0;
 }

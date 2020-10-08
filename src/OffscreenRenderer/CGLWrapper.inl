@@ -61,7 +61,7 @@ struct CGLWrapper : public OpenGLContext {
         resize(width, height); // Trigger buffer generation/binding
     }
 
-    ~CGLWrapper() {
+    virtual ~CGLWrapper() {
         // std::cout << "Destroy CGL " << m_ctx << std::endl;
         makeCurrent();
 
