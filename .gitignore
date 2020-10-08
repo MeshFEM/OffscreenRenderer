@@ -4,6 +4,7 @@ a.out
 *.ppm
 *.png
 *.mp4
+.nfs*
 build
 build_debug
 __pycache__

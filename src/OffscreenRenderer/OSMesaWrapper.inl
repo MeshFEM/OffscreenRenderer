@@ -69,6 +69,7 @@ namespace detail {
             // Render to the correct rectangular region of the context's buffer
             glViewport(x, y, w, h); 
             glScissor (x, y, w, h);
+            glEnable(GL_SCISSOR_TEST);
         }
 
         int getWidth()  const { return m_width;  }
@@ -108,6 +109,11 @@ namespace detail {
             // std::cout << "Accessing " << w << " x " << h << " image at " << x << ", " << y << std::endl;
             Eigen::Map<const Image> fullCanvas(m_buffer.data(), 4 * m_width, m_height);
             return fullCanvas.block(x, y, 4 * w, h);
+        }
+
+        // Write out the whole canvas (for debugging)
+        void writePNG(const std::string &path) const {
+            write_png_RGBA(path, m_width, m_height, m_buffer.data(), /* verticalFlip = */ true);
         }
 
         ~OSMesaContextSingleton() {
@@ -150,17 +156,14 @@ struct OSMesaWrapper : public OpenGLContext {
 
 private:
     virtual void m_resizeImpl(int /* width */, int /* height */) override {
-        // Notify osmesa context of new size if we are already registered
-        // (not if this call is triggered by the OSMesaWrapper constructor).
+        // Notify osmesa context of our new size if we are already registered
+        // (but not if this call is triggered by the OSMesaWrapper constructor).
         if (ctx().virtualContextIsRegistered(this)) {
             ctx().resizeToFit();
         }
     }
 
-    virtual void m_makeCurrent() override {
-        GLint x, y;
-        ctx().makeCurrent(this);
-    }
+    virtual void m_makeCurrent() override { ctx().makeCurrent(this); }
 
     virtual void m_readImage() {
         Eigen::Map<detail::OSMesaContextSingleton::Image>(m_buffer.data(), m_width * 4, m_height) = ctx().imageForVirtualContext(this);

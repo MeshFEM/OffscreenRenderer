@@ -256,7 +256,7 @@ class MeshRenderer:
         self.F = None
         self.vao.unsetIndexBuffer()
 
-    def render(self, clear=True):
+    def render(self, clear=True, clearColor = None):
         self.ctx.makeCurrent()
 
         # Sort triangles if needed
@@ -267,7 +267,8 @@ class MeshRenderer:
         if self.lineWidth != 0: self.replicatePerCorner()
 
         if clear:
-            self.ctx.clear(np.zeros(4) if self.transparentBackground else np.ones(4))
+            if clearColor is None: clearColor = np.zeros(4) if self.transparentBackground else np.ones(4)
+            self.ctx.clear(clearColor)
 
         self.ctx. enable(GLenum.GL_DEPTH_TEST)
         self.ctx.disable(GLenum.GL_CULL_FACE)
