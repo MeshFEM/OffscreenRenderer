@@ -65,12 +65,21 @@ int main(int argc, char *argv[])
         height = atoi(argv[3]);
     }
 
-    RenderState render1(width, height), render2(width, height);
-    render1.render();
-    render1.ctx->writePNG(filename + std::string("1.png"));
+    auto render1 = std::make_unique<RenderState>(width, height);
+    auto render2 = std::make_unique<RenderState>(2 * width, 2 * height);
+    render1->render();
+    render1->ctx->writePNG(filename + std::string("1.png"));
 
-    render2.render();
-    render2.ctx->writePNG(filename + std::string("2.png"));
+    render2->render();
+    render2->ctx->writePNG(filename + std::string("2.png"));
+
+    render1->render();
+    render2->ctx->writePNG(filename + std::string("3.png")); // Make sure context 2's buffer is not affected!
+
+    // Test deletion
+    render2.reset();
+    render1->render(); // this is essential since for our OSMesa virtual contexts, removing one leaves the others' buffers undefined!
+    render1->ctx->writePNG(filename + std::string("4.png"));
 
     return 0;
 }

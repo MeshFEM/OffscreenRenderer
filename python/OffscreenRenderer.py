@@ -108,12 +108,12 @@ class MeshRenderer:
         `F` can be `None` to disable indexed face set representation
         (i.e., to use glDrawArrays instead of glDrawElements)
         """
+        self.ctx.makeCurrent()
+
         self.numVertices = len(V)
         self._validateSizes(V, F, N, color)
         self.F = F
         self._activeReplicationIndices = None
-
-        self.ctx.makeCurrent()
 
         self.vao = VertexArrayObject()
         if self.F is not None:
@@ -124,13 +124,16 @@ class MeshRenderer:
     def needsDepthSort(self):
         return not self._sorted and ((self.alpha != 1.0) or not self._meshColorOpaque)
 
-    def depthSort(self):
+    def _depthSort(self):
         """
         If the mesh has translucency, sort the triangles from back to front.
         To avoid shuffling vertex attribute data when the viewpoint changes, we
         always use an index buffer when depth sorting.
         """
         if not self.needsDepthSort(): return
+
+        self.ctx.makeCurrent()
+
         if self.F is None:
             self.F = np.arange(self.numVertices)
 
@@ -146,6 +149,8 @@ class MeshRenderer:
         """
         Update the mesh's data without changing its connectivity.
         """
+        self.ctx.makeCurrent()
+
         if (color is None): color = self.color
         self._validateSizes(V, None, N, color) # updates `self.constColor`
 
@@ -238,6 +243,7 @@ class MeshRenderer:
         self.lineColor = color
 
     def replicatePerCorner(self):
+        self.ctx.makeCurrent()
         # Note: this operation preserves depth sorting!
         # (And it is more efficient to perform depth sorting first...)
         if self.hasPerCornerVtxData(): return
@@ -254,7 +260,7 @@ class MeshRenderer:
         self.ctx.makeCurrent()
 
         # Sort triangles if needed
-        self.depthSort()
+        self._depthSort()
 
         # Our wireframe rendering technique needs distinct copies of vertices
         # for each incident triangle.

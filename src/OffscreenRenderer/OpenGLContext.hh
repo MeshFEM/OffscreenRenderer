@@ -37,13 +37,13 @@ struct OpenGLContext {
     // Factory method for getting the right platform-specific library
     static std::unique_ptr<OpenGLContext> construct(int width, int height);
 
-    void resize(int width, int height) {
+    void resize(int width, int height, bool skipViewportCall = false) {
         m_width = width;
         m_height = height;
         m_buffer.resize(width * height * 4);
         m_resizeImpl(width, height);
-
-        glViewport(0, 0, width, height);
+        if (!skipViewportCall)
+            glViewport(0, 0, width, height);
     }
 
     int getWidth()  const { return m_width;  }
@@ -52,7 +52,6 @@ struct OpenGLContext {
     void makeCurrent() { m_makeCurrent(); }
 
     template<class F> void render(F &&f) {
-        std::cout << "render called" << std::endl;
         makeCurrent();
         f();
     }

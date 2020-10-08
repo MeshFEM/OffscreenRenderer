@@ -51,7 +51,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
 
     py::class_<OpenGLContext>(m, "OpenGLContext")
         .def(py::init(&OpenGLContext::construct), py::arg("width"), py::arg("height"))
-        .def("resize", &OpenGLContext::resize,    py::arg("width"), py::arg("height"))
+        .def("resize",      &OpenGLContext::resize, py::arg("width"), py::arg("height"), py::arg("skipViewportCall") = false)
         .def("makeCurrent", &OpenGLContext::makeCurrent)
         .def("finish",      &OpenGLContext::finish)
         .def("buffer",                &OpenGLContext::buffer,                py::return_value_policy::reference)

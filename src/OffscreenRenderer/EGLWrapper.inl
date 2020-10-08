@@ -22,7 +22,7 @@ struct EGLWrapper : public OpenGLContext {
 
         EGLint major, minor;
         eglInitialize(m_display, &major, &minor);
-        std::cout << major << ", " << minor << std::endl;
+        // std::cout << major << ", " << minor << std::endl;
 
         // Bind the API
         eglBindAPI(EGL_OPENGL_API);
@@ -45,7 +45,7 @@ struct EGLWrapper : public OpenGLContext {
 
         resize(width, height);
         makeCurrent();
-        std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
+        // std::cout << "gl version: " << glGetString(GL_VERSION) << std::endl;
     }
 
     virtual ~EGLWrapper() {
