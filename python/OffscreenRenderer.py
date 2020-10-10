@@ -62,6 +62,21 @@ def hexColorToFloat(c):
     if len(c) != 7: raise Exception('Invalid hex color')
     return np.array([int(c[i:i+2], 16) / 255 for i in range(1, len(c), 2)])
 
+def normalize(v):
+    return v / np.linalg.norm(v)
+
+def lookAtMatrix(position, target, up):
+    viewDir = normalize(np.array(target) - np.array(position))
+    right   = normalize(np.cross(viewDir, up))
+    upPerp  = normalize(np.cross(right, viewDir))
+    matView = np.identity(4)
+    matView[0, 0:3] = right
+    matView[1, 0:3] = upPerp
+    matView[2, 0:3] = -viewDir
+    matView[0:3, 3] = -matView[0:3, 0:3] @ position
+    matView[3, 0:4] = [0, 0, 0, 1]
+    return matView
+
 class MeshRenderer:
     def __init__(self, width, height):
         self.ctx = OpenGLContext(width, height)
@@ -174,21 +189,15 @@ class MeshRenderer:
             self.vao.setAttribute(2, color)
             self._meshColorOpaque = (color.shape[1] == 3) or (color[:, 3].min() == 1.0)
 
+    def setViewMatrix(self, mat):
+        self.matView = mat
+        self._sorted = False # Changing the viewpoint invalidates the depth sort
+
     def lookAt(self, position, target, up):
         self.cam_position = position
         self.cam_target   = target
         self.cam_up       = up
-        viewDir = np.array(target) - np.array(position)
-        viewDir /= np.linalg.norm(viewDir)
-        right   = np.cross(viewDir, up)
-        upPerp  = np.cross(right, viewDir)
-        self.matView[0, 0:3] = right
-        self.matView[1, 0:3] = upPerp
-        self.matView[2, 0:3] = -viewDir
-        self.matView[0:3, 3] = -self.matView[0:3, 0:3] @ position
-        self.matView[3, 0:4] = [0, 0, 0, 1]
-
-        self._sorted = False # Changing the viewpoint invalidates the depth sort
+        self.setViewMatrix(lookAtMatrix(position, target, up))
 
     def orbitedLookAt(self, position, target, up, angle):
         """
