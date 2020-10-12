@@ -103,3 +103,32 @@ class MeshRendererVideoWriter(VideoWriter):
         """
         self.mrenderer.render(True)
         super().writeFrame(self.mrenderer.array())
+
+import numpy as np
+class PlotVideoWriter(VideoWriter):
+    """
+    Creates an image sequence or a compressed video from  a MeshRenderer
+    """
+    def __init__(self, outPath, fig, dpi = 72, codec=Codec.H264, framerate=30, outWidth=None, outHeight=None):
+        fig.set_dpi(dpi)
+        self.dpi = dpi
+        fig.tight_layout()
+        fig.canvas.draw()
+        fig.canvas.buffer_rgba().tobytes()
+        super().__init__(outPath, *fig.canvas.get_width_height(), codec=codec, framerate=framerate, outWidth=outWidth, outHeight=outHeight)
+
+    def writeFrame(self, fig):
+        """
+        Render a new frame into the video.
+        """
+        fig.set_dpi(self.dpi)
+        fig.tight_layout()
+        if self.codec != Codec.ImgSeq:
+            # FFmpeg doesn't support transparent H264/HEVC output, and using
+            # a transparent plot background results in ugly plot labels.
+            fig.patch.set_facecolor('white')
+
+        w, h = fig.canvas.get_width_height()
+        if (w != self.inWidth) or (h != self.inHeight): raise Exception('Plot dimensions changed')
+        fig.canvas.draw()
+        super().writeFrame(np.frombuffer(fig.canvas.buffer_rgba(), dtype=np.uint8))
