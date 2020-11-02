@@ -230,6 +230,9 @@ class Mesh:
 
         shader.setUniform('lineWidth',         self.lineWidth)
         shader.setUniform('wireframeColor',    self.lineColor)
+
+        # Any constant color configured is not part of the VAO state and must be set again to ensure it hasn't been overwritten
+        if self.constColor: self.vao.setConstantAttribute(2, self.color)
         self.vao.draw(shader)
 
 class MeshRenderer:
@@ -262,14 +265,15 @@ class MeshRenderer:
         if len(self.meshes) == 0: self.meshes = [Mesh(self.ctx, V, F, N, color)]
         else: self.meshes[which].setMesh(self.ctx, V, F, N, color)
 
-    def addMesh(self, V, F, N, color):
+    def addMesh(self, V, F, N, color, makeDefault = True):
         """
         Add a mesh to the scene. Arguments are the same as `setMesh`.
+        By default, the new mesh becomes the active default one (index 0).
         """
-        self.meshes.append(Mesh(self.ctx, V, F, N, color))
+        self.meshes.insert(0 if makeDefault else len(self.meshes), Mesh(self.ctx, V, F, N, color))
 
     def removeMesh(self, which):
-        self.self.meshes.remove(meshes[which])
+        self.self.meshes.remove(self.meshes[which])
 
     def modelMatrix(self, position, scale, quaternion, which = 0):
         self.meshes[which].modelMatrix(position, scale, quaternion)
@@ -358,7 +362,7 @@ class MeshRenderer:
         # Proper ordering of triangles of multiple transparent objects is not implemented.
         transparencySortedMeshes = sorted(self.meshes, key=lambda m: not m.isOpaque())
 
-        for mesh in transparencySortedMeshes:
+        for i, mesh in enumerate(transparencySortedMeshes):
             mesh.render(self.shader, self.matView)
 
     def array(self      ): return self.ctx.array(     unpremultiply=self.transparentBackground)

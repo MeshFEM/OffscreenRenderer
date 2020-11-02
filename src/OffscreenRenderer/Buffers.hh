@@ -78,12 +78,16 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
 
     template<typename T>
     void setConstantAttribute(int loc, const T &a) {
-        bind();
+        // WARNING: the generic value set here is global and *not*
+        // part of the VAO's state. Therefore this method should
+        // be called before each draw of the VAO to make sure someone
+        // else didn't change the value...
         if (m_attributes.count(loc) == 0) {
             // Create a dummy, empty attribute to satisfy validation in `draw`
             m_attributes[loc] = BufferObject(); 
         }
 
+        bind();
         glDisableVertexAttribArray(GLuint(loc));
         detail::setAttribute(GLuint(loc), a);
 
