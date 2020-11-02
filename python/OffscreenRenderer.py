@@ -77,35 +77,23 @@ def lookAtMatrix(position, target, up):
     matView[3, 0:4] = [0, 0, 0, 1]
     return matView
 
-class MeshRenderer:
-    def __init__(self, width, height):
-        self.ctx = OpenGLContext(width, height)
-        self.shader = self.ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
-                                                    SHADER_DIR + '/phong_with_wireframe.frag')
+class Mesh:
+    def __init__(self, ctx, V, F, N, color):
+        self.ctx = ctx
+
         self.alpha = 1.0 # Global opacity of the mesh
         self._meshColorOpaque = True # to be determined from the user-passed color
         self._sorted = False
 
         self.setWireframe(0.0)
-        self.matModel      = np.identity(4)
-        self.matView       = np.identity(4)
-        self.matProjection = np.identity(4)
-
-        white = np.ones(3)
-        self.lightEyePos       = [0, 0, 5]
-        self. diffuseIntensity = 0.6 * white
-        self. ambientIntensity = 0.5 * white
-        self.specularIntensity = 1.0 * white
-        self.shininess         = 20.0
-
-        self.transparentBackground = True
+        self.matModel = np.identity(4)
+        self.shininess = 20.0
 
         # The triangle index array in active use to replicate vertex data to
         # per-corner data.
         self._activeReplicationIndices = None
 
-    def resize(self, width, height):
-        self.ctx.resize(width, height)
+        self.setMesh(V, F, N, color)
 
     def _validateSizes(self, V, F, N, color):
         """ Side effect: update constColor """
@@ -136,10 +124,11 @@ class MeshRenderer:
 
         self.updateMeshData(V, N, color)
 
+    def isOpaque(self): return (self.alpha == 1.0) and not self._meshColorOpaque
     def needsDepthSort(self):
-        return not self._sorted and ((self.alpha != 1.0) or not self._meshColorOpaque)
+        return not (self._sorted or self.isOpaque())
 
-    def _depthSort(self):
+    def _depthSort(self, matView):
         """
         If the mesh has translucency, sort the triangles from back to front.
         To avoid shuffling vertex attribute data when the viewpoint changes, we
@@ -156,7 +145,7 @@ class MeshRenderer:
         # z coordinates in eye space. Note, we discard the irrelevant
         # translation part of `matModelView` to avoid working with
         # homogeneous coordinates.
-        order = np.argsort((self.V[self.F].reshape((-1, 3, 3)).mean(axis=1) @ (self.matView @ self.matModel)[0:3, 0:3].T)[:, 2])
+        order = np.argsort((self.V[self.F].reshape((-1, 3, 3)).mean(axis=1) @ (matView @ self.matModel)[0:3, 0:3].T)[:, 2])
         self.F = self.F.reshape((-1, 3))[order]
         self.vao.setIndexBuffer(self.F)
 
@@ -194,6 +183,103 @@ class MeshRenderer:
             self.vao.setAttribute(2, color)
             self._meshColorOpaque = (color.shape[1] == 3) or (color[:, 3].min() == 1.0)
 
+    def modelMatrix(self, position, scale, quaternion):
+        self.matModel[0:3, 0:3] = scale * scipy.spatial.transform.Rotation.from_quat(quaternion).as_matrix()
+        self.matModel[0:3,   3] = position
+        self.matModel[  3, 0:4] = [0, 0, 0, 1]
+
+        self._sorted = False # Changing the mesh orientation invalidates its depth sort
+
+    def hasPerCornerVtxData(self):
+        return (self.F is None) or (len(self.F.ravel()) == self.numVertices)
+
+    def setWireframe(self, lineWidth = 1.0, color = [0.0, 0.0, 0.0, 1.0]):
+        self.lineWidth = lineWidth
+        self.lineColor = color
+
+    def replicatePerCorner(self):
+        self.ctx.makeCurrent()
+        # Note: this operation preserves depth sorting!
+        # (And it is more efficient to perform depth sorting first...)
+        if self.hasPerCornerVtxData(): return
+
+        # Switch to replication mode
+        self._activeReplicationIndices = self.F.ravel()
+        self.updateMeshData(self.V, self.N, self.color)
+
+        # Disable the index buffers
+        self.F = None
+        self.vao.unsetIndexBuffer()
+
+    def render(self, shader, matView):
+        self.ctx.makeCurrent()
+
+        # Sort triangles if needed
+        self._depthSort(matView)
+
+        # Our wireframe rendering technique needs distinct copies of vertices
+        # for each incident triangle.
+        if self.lineWidth != 0: self.replicatePerCorner()
+
+        modelViewMatrix = matView @ self.matModel
+        shader.setUniform('modelViewMatrix',   modelViewMatrix)
+        shader.setUniform('normalMatrix',      np.linalg.inv(modelViewMatrix[0:3, 0:3]).T)
+
+        shader.setUniform('shininess',         self.shininess)
+        shader.setUniform('alpha',             self.alpha)
+
+        shader.setUniform('lineWidth',         self.lineWidth)
+        shader.setUniform('wireframeColor',    self.lineColor)
+        self.vao.draw(shader)
+
+class MeshRenderer:
+    def __init__(self, width, height):
+        self.ctx = OpenGLContext(width, height)
+        self.shader = self.ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                                    SHADER_DIR + '/phong_with_wireframe.frag')
+        self.meshes = []
+
+        self.matView       = np.identity(4)
+        self.matProjection = np.identity(4)
+
+        white = np.ones(3)
+        self.lightEyePos       = [0, 0, 5]
+        self. diffuseIntensity = 0.6 * white
+        self. ambientIntensity = 0.5 * white
+        self.specularIntensity = 1.0 * white
+
+        self.transparentBackground = True
+
+    def resize(self, width, height):
+        self.ctx.resize(width, height)
+
+    def setMesh(self, V, F, N, color, which = 0):
+        """
+        Initialize/update the mesh data and connectivity.
+        `F` can be `None` to disable indexed face set representation
+        (i.e., to use glDrawArrays instead of glDrawElements)
+        """
+        if len(self.meshes) == 0: self.meshes = [Mesh(self.ctx, V, F, N, color)]
+        else: self.meshes[which].setMesh(self.ctx, V, F, N, color)
+
+    def addMesh(self, V, F, N, color):
+        """
+        Add a mesh to the scene. Arguments are the same as `setMesh`.
+        """
+        self.meshes.append(Mesh(self.ctx, V, F, N, color))
+
+    def removeMesh(self, which):
+        self.self.meshes.remove(meshes[which])
+
+    def modelMatrix(self, position, scale, quaternion, which = 0):
+        self.meshes[which].modelMatrix(position, scale, quaternion)
+
+    def updateMeshData(self, V, N, color = None, which = 0):
+        """
+        Update the mesh's data without changing its connectivity.
+        """
+        self.meshes[which].updateMeshData(V, N, color)
+
     def setViewMatrix(self, mat):
         self.matView = mat
         self._sorted = False # Changing the viewpoint invalidates the depth sort
@@ -221,13 +307,6 @@ class MeshRenderer:
         self.matProjection[2, 3] = 2.0 * (near * far) / (near - far)
         self.matProjection[3, 2] = -1.0
 
-    def modelMatrix(self, position, scale, quaternion):
-        self.matModel[0:3, 0:3] = scale * scipy.spatial.transform.Rotation.from_quat(quaternion).as_matrix()
-        self.matModel[0:3,   3] = position
-        self.matModel[  3, 0:4] = [0, 0, 0, 1]
-
-        self._sorted = False # Changing the mesh orientation invalidates its depth sort
-
     def getCameraParams(self):
         """
         Emulate with MeshFEM's TriMeshViewer.getCameraParams. As an unfortunate
@@ -244,36 +323,11 @@ class MeshRenderer:
         """
         self.lookAt(params[0], params[2], params[1])
 
-    def hasPerCornerVtxData(self):
-        return (self.F is None) or (len(self.F.ravel()) == self.numVertices)
-
-    def setWireframe(self, lineWidth = 1.0, color = [0.0, 0.0, 0.0, 1.0]):
-        self.lineWidth = lineWidth
-        self.lineColor = color
-
-    def replicatePerCorner(self):
-        self.ctx.makeCurrent()
-        # Note: this operation preserves depth sorting!
-        # (And it is more efficient to perform depth sorting first...)
-        if self.hasPerCornerVtxData(): return
-
-        # Switch to replication mode
-        self._activeReplicationIndices = self.F.ravel()
-        self.updateMeshData(self.V, self.N, self.color)
-
-        # Disable the index buffers
-        self.F = None
-        self.vao.unsetIndexBuffer()
+    def setWireframe(self, lineWidth = 1.0, color = [0.0, 0.0, 0.0, 1.0], which = 0):
+        self.meshes[which].setWireframe(lineWidth, color)
 
     def render(self, clear=True, clearColor = None):
         self.ctx.makeCurrent()
-
-        # Sort triangles if needed
-        self._depthSort()
-
-        # Our wireframe rendering technique needs distinct copies of vertices
-        # for each incident triangle.
-        if self.lineWidth != 0: self.replicatePerCorner()
 
         if clear:
             if clearColor is None: clearColor = np.zeros(4) if self.transparentBackground else np.ones(4)
@@ -291,22 +345,21 @@ class MeshRenderer:
                            GLenum.GL_ONE,       GLenum.GL_ONE_MINUS_SRC_ALPHA)
 
         self.shader.use()
-
-        modelViewMatrix = self.matView @ self.matModel
-        self.shader.setUniform('modelViewMatrix',   modelViewMatrix)
+        # Set mesh-independent attributes
         self.shader.setUniform('projectionMatrix',  self.matProjection)
-        self.shader.setUniform('normalMatrix',      np.linalg.inv(modelViewMatrix[0:3, 0:3]).T)
 
         self.shader.setUniform('lightEyePos',       self.lightEyePos)
         self.shader.setUniform('diffuseIntensity',  self.diffuseIntensity)
         self.shader.setUniform('ambientIntensity',  self.ambientIntensity)
         self.shader.setUniform('specularIntensity', self.specularIntensity)
-        self.shader.setUniform('shininess',         self.shininess)
-        self.shader.setUniform('alpha',             self.alpha)
 
-        self.shader.setUniform('lineWidth',         self.lineWidth)
-        self.shader.setUniform('wireframeColor',    self.lineColor)
-        self.vao.draw(self.shader)
+        # Render the opaque meshes first
+        # This will result in a perfely rendered scene with N opaque objects and 1 transparent object.
+        # Proper ordering of triangles of multiple transparent objects is not implemented.
+        transparencySortedMeshes = sorted(self.meshes, key=lambda m: not m.isOpaque())
+
+        for mesh in transparencySortedMeshes:
+            mesh.render(self.shader, self.matView)
 
     def array(self      ): return self.ctx.array(     unpremultiply=self.transparentBackground)
     def image(self      ): return self.ctx.image(     unpremultiply=self.transparentBackground)
