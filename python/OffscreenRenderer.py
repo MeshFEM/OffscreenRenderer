@@ -290,13 +290,13 @@ class MeshRenderer:
         self.cam_up       = up
         self.setViewMatrix(lookAtMatrix(position, target, up))
 
-    def orbitedLookAt(self, position, target, up, angle):
+    def orbitedLookAt(self, position, target, up, axis, angle):
         """
         View looking at the target from a camera position rotated by `angle` around the up vector.
         """
         v = np.array(position) - np.array(target)
-        self.lookAt(target + scipy.spatial.transform.Rotation.from_rotvec(angle * np.array(up) / np.linalg.norm(up)).apply(v),
-                    target, up)
+        R = scipy.spatial.transform.Rotation.from_rotvec(angle * np.array(axis) / np.linalg.norm(axis))
+        self.lookAt(target + R.apply(v), target, R.apply(up))
 
     def perspective(self, fovy, aspect, near, far):
         f = 1.0 / np.tan(0.5 * np.deg2rad(fovy))
@@ -374,9 +374,11 @@ class MeshRenderer:
             frameCallback(self, frame)
             vw.writeFrame()
 
-    def orbitAnimation(self, outPath, nframes, *videoWriterArgs, **videoWriterKWargs):
+    def orbitAnimation(self, outPath, nframes, axis=None, *videoWriterArgs, **videoWriterKWargs):
         """
         Render an animation of the camera making a full orbit around the up axis centered at its target.
         """
-        def c(r, i): r.orbitedLookAt(self.cam_position, self.cam_target, self.cam_up, 2  * np.pi / nframes * i)
+        pos, tgt, up = np.array(self.cam_position), np.array(self.cam_target), np.array(self.cam_up)
+        if axis is None: axis = up.copy()
+        def c(r, i): r.orbitedLookAt(pos, tgt, up, axis, 2 * np.pi / nframes * i)
         self.renderAnimation(outPath, nframes, c, *videoWriterArgs, **videoWriterKWargs)
