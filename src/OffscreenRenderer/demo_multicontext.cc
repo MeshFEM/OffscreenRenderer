@@ -11,7 +11,7 @@ struct RenderState {
     RenderState(int width, int height) {
         ctx = OpenGLContext::construct(width, height);
         ctx->makeCurrent();
-        shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
+        shader = Shader::fromFiles(ctx, SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
         for (const auto &u : shader->getUniforms()) {
             std::cout << "Uniform " << u.loc << ": " << u.name << std::endl;
         }
@@ -25,7 +25,7 @@ struct RenderState {
                   0.0f, 0.0f, 1.0f, 1.0f;
         Eigen::Matrix<unsigned int, 3, 1> indices;
         indices << 0, 1, 2;
-        vao = std::make_unique<VertexArrayObject>();
+        vao = std::make_unique<VertexArrayObject>(ctx);
         vao->setAttribute(0, positions);
         vao->setAttribute(1, colors);
         vao->setIndexBuffer(indices);
@@ -33,6 +33,7 @@ struct RenderState {
 
     void render() {
         ctx->render([&]() {
+            // glClearColor(0, 0, 0, 1);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             glEnable(GL_DEPTH_TEST);
 
@@ -42,7 +43,7 @@ struct RenderState {
         ctx->finish();
     }
 
-    std::unique_ptr<OpenGLContext> ctx;
+    std::shared_ptr<OpenGLContext> ctx;
     std::unique_ptr<VertexArrayObject> vao;
     std::unique_ptr<Shader> shader;
 };

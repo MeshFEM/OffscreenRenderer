@@ -28,8 +28,8 @@ struct ShaderObject : RAIIGLResource<ShaderObject> {
     using Base::id;
 
     // Create shader and load in source (but do not compile yet!)
-    ShaderObject(const std::string &source, GLenum type)
-        : Base(glCreateShader(type))
+    ShaderObject(std::weak_ptr<OpenGLContext> ctx, const std::string &source, GLenum type)
+        : Base(ctx, glCreateShader(type))
     {
         if (source.size() == 0) throw std::runtime_error("Empty shader");
         const char *src = source.c_str();
@@ -94,7 +94,7 @@ struct Shader {
     struct Program : RAIIGLResource<Program> {
         using Base = RAIIGLResource<Program>;
         using Base::id;
-        Program() : Base(glCreateProgram()) { this->m_validateConstruction(); }
+        Program(std::weak_ptr<OpenGLContext> ctx) : Base(ctx, glCreateProgram()) { this->m_validateConstruction(); }
 
     private:
         friend struct RAIIGLResource<Program>;
@@ -102,13 +102,15 @@ struct Shader {
     };
 
     using Sources = std::vector<std::string>;
-    Shader(const Sources &vtxSources,
+    Shader(std::weak_ptr<OpenGLContext> ctx,
+           const Sources &vtxSources,
            const Sources &fragSources,
            const Sources &geoSources = Sources())
+        : m_prog(ctx)
     {
-        for (const auto &s :  vtxSources) m_objects.emplace_back(s, GL_VERTEX_SHADER);
-        for (const auto &s : fragSources) m_objects.emplace_back(s, GL_FRAGMENT_SHADER);
-        for (const auto &s :  geoSources) m_objects.emplace_back(s, GL_GEOMETRY_SHADER);
+        for (const auto &s :  vtxSources) m_objects.emplace_back(ctx, s, GL_VERTEX_SHADER);
+        for (const auto &s : fragSources) m_objects.emplace_back(ctx, s, GL_FRAGMENT_SHADER);
+        for (const auto &s :  geoSources) m_objects.emplace_back(ctx, s, GL_GEOMETRY_SHADER);
 
         // Compile and attach all shader objects
         for (auto &obj : m_objects) {
@@ -132,11 +134,11 @@ struct Shader {
             m_attributes.emplace_back(m_prog.id, i);
     }
 
-    Shader(const std::string &vtx, const std::string &frag, const std::string &geo)
-        : Shader(Sources(1, vtx), Sources(1, frag), Sources(1, geo)) { }
+    Shader(std::weak_ptr<OpenGLContext> ctx, const std::string &vtx, const std::string &frag, const std::string &geo)
+        : Shader(ctx, Sources(1, vtx), Sources(1, frag), Sources(1, geo)) { }
 
-    Shader(const std::string &vtx, const std::string &frag)
-        : Shader(Sources(1, vtx), Sources(1, frag)) { }
+    Shader(std::weak_ptr<OpenGLContext> ctx, const std::string &vtx, const std::string &frag)
+        : Shader(ctx, Sources(1, vtx), Sources(1, frag)) { }
 
     // Copy is disallowed, but move is ok.
     Shader(const Shader &) = delete;
@@ -156,10 +158,10 @@ struct Shader {
     }
 
     // Factory method to construct from shaders stored in files.
-    static std::unique_ptr<Shader> fromFiles(const std::string &vtxFile, const std::string &fragFile, const std::string &geoFile = std::string()) {
+    static std::unique_ptr<Shader> fromFiles(std::weak_ptr<OpenGLContext> ctx, const std::string &vtxFile, const std::string &fragFile, const std::string &geoFile = std::string()) {
         if (geoFile.size())
-            return std::make_unique<Shader>(readFile(vtxFile), readFile(fragFile), readFile(geoFile));
-        return std::make_unique<Shader>(readFile(vtxFile), readFile(fragFile));
+            return std::make_unique<Shader>(ctx, readFile(vtxFile), readFile(fragFile), readFile(geoFile));
+        return std::make_unique<Shader>(ctx, readFile(vtxFile), readFile(fragFile));
     }
 
     void use() const { glUseProgram(m_prog.id); }

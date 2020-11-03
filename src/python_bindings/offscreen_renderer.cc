@@ -49,7 +49,7 @@ struct BindSetConstAttribute {
 PYBIND11_MODULE(_offscreen_renderer, m) {
     bindGLEnum(m);
 
-    py::class_<OpenGLContext>(m, "OpenGLContext")
+    py::class_<OpenGLContext, std::shared_ptr<OpenGLContext>>(m, "OpenGLContext")
         .def(py::init(&OpenGLContext::construct), py::arg("width"), py::arg("height"))
         .def("resize",      &OpenGLContext::resize, py::arg("width"), py::arg("height"), py::arg("skipViewportCall") = false)
         .def("makeCurrent", &OpenGLContext::makeCurrent)
@@ -92,8 +92,8 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
 
     py::class_<Shader> pyShader(m, "Shader");
     pyShader
-        .def(py::init<const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"), py::call_guard<py::scoped_ostream_redirect, py::scoped_estream_redirect>())
-        .def(py::init<const std::string &, const std::string &, const std::string &>(), py::arg("vtx"), py::arg("frag"), py::arg("geo"), py::call_guard<py::scoped_ostream_redirect, py::scoped_estream_redirect>())
+        .def(py::init<std::shared_ptr<OpenGLContext>, const std::string &, const std::string &>(), py::arg("ctx"), py::arg("vtx"), py::arg("frag"), py::call_guard<py::scoped_ostream_redirect, py::scoped_estream_redirect>())
+        .def(py::init<std::shared_ptr<OpenGLContext>, const std::string &, const std::string &, const std::string &>(), py::arg("ctx"), py::arg("vtx"), py::arg("frag"), py::arg("geo"), py::call_guard<py::scoped_ostream_redirect, py::scoped_estream_redirect>())
         .def("use", &Shader::use)
         .def_property_readonly("uniforms",   &Shader::getUniforms,   py::return_value_policy::reference)
         .def_property_readonly("attributes", &Shader::getAttributes, py::return_value_policy::reference)
@@ -110,7 +110,7 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
 
     py::class_<VertexArrayObject> pyVAO(m, "VertexArrayObject");
     pyVAO
-        .def(py::init<>())
+        .def(py::init<std::shared_ptr<OpenGLContext>>(), py::arg("ctx"))
         .def("setAttribute",     &VertexArrayObject::setAttribute,   py::arg("index"), py::arg("A"))
         .def("setIndexBuffer",   &VertexArrayObject::setIndexBuffer, py::arg("A"))
         .def("unsetIndexBuffer", &VertexArrayObject::unsetIndexBuffer)

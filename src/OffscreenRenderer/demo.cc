@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     auto ctx = OpenGLContext::construct(width, height);
     ctx->makeCurrent();
 
-    auto shader = Shader::fromFiles(SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
+    auto shader = Shader::fromFiles(ctx, SHADER_PATH "/demo.vert", SHADER_PATH "/demo.frag");
     for (const auto &u : shader->getUniforms()) {
         std::cout << "Uniform " << u.loc << ": " << u.name << std::endl;
     }
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     Eigen::Matrix<unsigned int, 3, 1> indices;
     indices << 0, 1, 2;
 
-    VertexArrayObject vao;
+    VertexArrayObject vao(ctx);
     vao.setAttribute(0, positions);
     vao.setAttribute(1, colors);
     vao.setIndexBuffer(indices);

@@ -23,9 +23,9 @@ struct BufferObject : RAIIGLResource<BufferObject> {
     using Base = RAIIGLResource<BufferObject>;
     using Base::id;
 
-    BufferObject() { }
-    BufferObject(Eigen::Ref<const MXfR > A) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
-    BufferObject(Eigen::Ref<const MXuiR> A) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
+    BufferObject() : Base(std::weak_ptr<OpenGLContext>()) { } // Allow creation of a dummy, unallocated buffer object not tied to any context
+    BufferObject(std::weak_ptr<OpenGLContext> ctx, Eigen::Ref<const MXfR > A) : Base(ctx) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
+    BufferObject(std::weak_ptr<OpenGLContext> ctx, Eigen::Ref<const MXuiR> A) : Base(ctx) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
 
     void bind(GLenum target) const { glBindBuffer(target, id); }
 
@@ -52,7 +52,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
     using Base = RAIIGLResource<VertexArrayObject>;
     using Base::id;
 
-    VertexArrayObject() {
+    VertexArrayObject(std::weak_ptr<OpenGLContext> ctx) : Base(ctx) {
         glGenVertexArrays(1, &id);
         this->m_validateConstruction();
     }
@@ -63,7 +63,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
     void setAttribute(int loc, Eigen::Ref<const MXfR> A) {
         bind();
         auto it = m_attributes.find(loc);
-        if (it == m_attributes.end()) it = m_attributes.emplace(loc, BufferObject(A)).first;
+        if (it == m_attributes.end()) it = m_attributes.emplace(loc, BufferObject(this->m_ctx, A)).first;
         else                          it->second.updateData(A);
         auto &buf = it->second;
         buf.bind(GL_ARRAY_BUFFER);
@@ -96,9 +96,10 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
 
     void setIndexBuffer(Eigen::Ref<const MXuiR> A) {
         bind();
+        glCheckError();
         Eigen::Map<const Eigen::Matrix<unsigned int, Eigen::Dynamic, 1>> flatA(A.data(), A.size());
         if (m_indexBuffer.allocated()) m_indexBuffer.updateData(flatA);
-        else  m_indexBuffer = BufferObject(flatA);
+        else  m_indexBuffer = BufferObject(this->m_ctx, flatA);
         m_indexBuffer.bind(GL_ELEMENT_ARRAY_BUFFER);
         glCheckError();
     }
@@ -128,7 +129,10 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         }
 
         s.use();
+        glCheckError();
+
         bind();
+        glCheckError();
 
         if (m_indexBuffer.allocated()) {
             // std::cout << "glDrawElements (indexed)" << std::endl;

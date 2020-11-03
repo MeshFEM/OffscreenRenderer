@@ -13,14 +13,15 @@ class ShaderLibrary:
     """
     Load GLSL shaders from files, with caching.
     """
-    def __init__(self):
+    def __init__(self, ctx):
         self.shaders = {}
+        self.ctx = ctx
     def load(self, vtxFile, fragFile, geoFile = ""):
         files = [vtxFile, fragFile]
         if geoFile != "": files.append(geoFile)
         files = tuple(files)
         if files not in self.shaders:
-            self.shaders[files] = Shader(*[open(f).read() for f in files])
+            self.shaders[files] = Shader(self.ctx, *[open(f).read() for f in files])
         return self.shaders[files]
 
 class OpenGLContext(_offscreen_renderer.OpenGLContext):
@@ -45,13 +46,8 @@ class OpenGLContext(_offscreen_renderer.OpenGLContext):
 
     def shaderLibrary(self):
         if not hasattr(self, '_shaderLib'):
-            self._shaderLib = ShaderLibrary()
+            self._shaderLib = ShaderLibrary(self)
         return self._shaderLib
-
-    def __del__(self):
-        if (hasattr(self, '_shaderLib')):
-            self.makeCurrent() # Make sure shader deletion is acting on this context's shaders!!!
-            del self._shaderLib
 
 def hexColorToFloat(c):
     """
@@ -118,7 +114,7 @@ class Mesh:
         self.F = F
         self._activeReplicationIndices = None
 
-        self.vao = VertexArrayObject()
+        self.vao = VertexArrayObject(self.ctx)
         if self.F is not None:
             self.vao.setIndexBuffer(self.F)
 
@@ -136,8 +132,6 @@ class Mesh:
         """
         if not self.needsDepthSort(): return
 
-        self.ctx.makeCurrent()
-
         if self.F is None:
             self.F = np.arange(self.numVertices)
 
@@ -147,6 +141,8 @@ class Mesh:
         # homogeneous coordinates.
         order = np.argsort((self.V[self.F].reshape((-1, 3, 3)).mean(axis=1) @ (matView @ self.matModel)[0:3, 0:3].T)[:, 2])
         self.F = self.F.reshape((-1, 3))[order]
+
+        self.ctx.makeCurrent()
         self.vao.setIndexBuffer(self.F)
 
     def updateMeshData(self, V, N, color = None):
@@ -384,7 +380,3 @@ class MeshRenderer:
         """
         def c(r, i): r.orbitedLookAt(self.cam_position, self.cam_target, self.cam_up, 2  * np.pi / nframes * i)
         self.renderAnimation(outPath, nframes, c, *videoWriterArgs, **videoWriterKWargs)
-
-    def __del__(self):
-        self.shader = None # Must happen first!
-        del self.ctx

@@ -35,7 +35,7 @@ struct OpenGLContext {
     using MapConstColor = Eigen::Map<const Eigen::Array<unsigned char, Eigen::Dynamic, 3, Eigen::RowMajor>, 0, Eigen::OuterStride<4>>;
 
     // Factory method for getting the right platform-specific library
-    static std::unique_ptr<OpenGLContext> construct(int width, int height);
+    static std::shared_ptr<OpenGLContext> construct(int width, int height);
 
     void resize(int width, int height, bool skipViewportCall = false) {
         m_width = width;
@@ -203,13 +203,13 @@ static_assert(false, "No context wrapper available");
 #endif
 
 // Factory method for getting the right platform-specific library
-inline std::unique_ptr<OpenGLContext> OpenGLContext::construct(int width, int height) {
+inline std::shared_ptr<OpenGLContext> OpenGLContext::construct(int width, int height) {
     #if USE_EGL
-    return std::make_unique<EGLWrapper>(width, height);
+    return std::make_shared<EGLWrapper>(width, height);
     #elif USE_OSMESA
-    return std::make_unique<OSMesaWrapper>(width, height);
+    return std::make_shared<OSMesaWrapper>(width, height);
     #elif USE_CGL
-    return std::make_unique<CGLWrapper>(width, height);
+    return std::make_shared<CGLWrapper>(width, height);
     #else
     static_assert(false, "No context wrapper available");
     #endif

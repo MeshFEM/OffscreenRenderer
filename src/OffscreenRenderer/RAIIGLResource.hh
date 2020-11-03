@@ -11,10 +11,13 @@
 #ifndef RAIIGLRESOURCE_HH
 #define RAIIGLRESOURCE_HH
 
+#include "OpenGLContext.hh"
+
+// Resource linked to a particular context
 template<class Derived>
 struct RAIIGLResource {
-    RAIIGLResource() { }
-    RAIIGLResource(GLuint _id) : id(_id) {
+    RAIIGLResource(std::weak_ptr<OpenGLContext> ctx) : m_ctx(ctx) { }
+    RAIIGLResource(std::weak_ptr<OpenGLContext> ctx, GLuint _id) : id(_id), m_ctx(ctx) {
         m_validateConstruction();
     }
 
@@ -24,19 +27,26 @@ struct RAIIGLResource {
     RAIIGLResource(RAIIGLResource &&b) : id(b.id) { b.id = 0; }
 
     RAIIGLResource &operator=(const RAIIGLResource &  ) = delete;
-    RAIIGLResource &operator=(      RAIIGLResource &&b) { id = b.id; b.id = 0; return *this; }
+    RAIIGLResource &operator=(      RAIIGLResource &&b) { id = b.id; b.id = 0; m_ctx = b.m_ctx; b.m_ctx.reset(); return *this; }
 
-    bool allocated() const { return id != 0; }
+    // Note: if a context is destroyed, the driver should automatically
+    // deallocate all of its resources (assuming they are not shared by
+    // another context).
+    bool allocated() const { return (id != 0) && !m_ctx.expired(); }
 
     ~RAIIGLResource() {
         if (allocated()) {
             // std::cout << "Deleting resource " << id << std::endl;
+            auto ctx = m_ctx.lock();
+            if (!ctx) { std::cerr << "WARNING: could not lock context" << std::endl; return; }
+            ctx->makeCurrent();
             static_cast<Derived *>(this)->m_delete();
         }
     }
 
     GLuint id = 0;
 protected:
+    std::weak_ptr<OpenGLContext> m_ctx;
     void m_validateConstruction() {
         glCheckError("resource creation");
         if (id == 0) throw std::runtime_error("Resource creation failed");
