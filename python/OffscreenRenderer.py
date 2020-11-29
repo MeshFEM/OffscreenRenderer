@@ -179,6 +179,27 @@ class Mesh:
             self.vao.setAttribute(2, color)
             self._meshColorOpaque = (color.shape[1] == 3) or (color[:, 3].min() == 1.0)
 
+    def setColor(self, color):
+        """
+        Update the mesh color without changing its geometry.
+        """
+        self.ctx.makeCurrent()
+        self._validateSizes(self.V, None, self.N, color) # updates `self.constColor`
+
+        # Replicate the data to per-corner if in replication mode.
+        if self._activeReplicationIndices is not None:
+            if not self.constColor: color = color[self._activeReplicationIndices]
+
+        self.color= color
+
+        if self.constColor:
+            self.vao.setConstantAttribute(2, color)
+            self._meshColorOpaque = (len(color) == 3) or (color[3] == 1.0)
+            print('set const color: ', color)
+        else:
+            self.vao.setAttribute(2, color)
+            self._meshColorOpaque = (color.shape[1] == 3) or (color[:, 3].min() == 1.0)
+
     def modelMatrix(self, position, scale, quaternion):
         self.matModel[0:3, 0:3] = scale * scipy.spatial.transform.Rotation.from_quat(quaternion).as_matrix()
         self.matModel[0:3,   3] = position
