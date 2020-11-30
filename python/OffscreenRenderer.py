@@ -280,7 +280,7 @@ class MeshRenderer:
         (i.e., to use glDrawArrays instead of glDrawElements)
         """
         if len(self.meshes) == 0: self.meshes = [Mesh(self.ctx, V, F, N, color)]
-        else: self.meshes[which].setMesh(self.ctx, V, F, N, color)
+        else: self.meshes[which].setMesh(V, F, N, color)
 
     def addMesh(self, V, F, N, color, makeDefault = True):
         """
