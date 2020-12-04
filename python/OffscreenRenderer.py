@@ -58,6 +58,20 @@ def hexColorToFloat(c):
     if len(c) != 7: raise Exception('Invalid hex color')
     return np.array([int(c[i:i+2], 16) / 255 for i in range(1, len(c), 2)])
 
+def decodeColor(c):
+    """
+    Allow specifying colors by (r, g, b) triplets, hex codes, or X11 names.
+    (decodes into an (r, g, b) triplet)
+    """
+    import colors
+    if isinstance(c, str):
+        if c[0] == '#' and len(c) == 7:
+            c = hexColorToFloat(c)
+        elif c in colors.x11_colors:
+            c = hexColorToFloat(colors.x11_colors[c])
+        else: raise Exception('Unrecognized color: ' + c)
+    return c
+
 def normalize(v):
     return v / np.linalg.norm(v)
 
@@ -154,8 +168,7 @@ class Mesh:
         if (color is None): color = self.color
         self._validateSizes(V, None, N, color) # updates `self.constColor`
 
-        if isinstance(color, str) and len(color) == 7:
-            color = hexColorToFloat(color)
+        color = decodeColor(color)
 
         # Replicate the data to per-corner if in replication mode.
         if self._activeReplicationIndices is not None:
@@ -190,7 +203,8 @@ class Mesh:
         if self._activeReplicationIndices is not None:
             if not self.constColor: color = color[self._activeReplicationIndices]
 
-        self.color= color
+        color = decodeColor(color)
+        self.color = color
 
         if self.constColor:
             self.vao.setConstantAttribute(2, color)
