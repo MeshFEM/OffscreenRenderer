@@ -134,7 +134,7 @@ class Mesh:
 
         self.updateMeshData(V, N, color)
 
-    def isOpaque(self): return (self.alpha == 1.0) and not self._meshColorOpaque
+    def isOpaque(self): return (self.alpha == 1.0) and self._meshColorOpaque
     def needsDepthSort(self):
         return not (self._sorted or self.isOpaque())
 
@@ -393,7 +393,7 @@ class MeshRenderer:
         # Proper ordering of triangles of multiple transparent objects is not implemented.
         transparencySortedMeshes = sorted(self.meshes, key=lambda m: not m.isOpaque())
 
-        for i, mesh in enumerate(transparencySortedMeshes):
+        for mesh in transparencySortedMeshes:
             mesh.render(self.shader, self.matView)
 
     def array(self      ): return self.ctx.array(     unpremultiply=self.transparentBackground)
