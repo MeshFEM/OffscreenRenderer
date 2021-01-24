@@ -64,8 +64,11 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         bind();
         auto it = m_attributes.find(loc);
         if (it == m_attributes.end()) it = m_attributes.emplace(loc, BufferObject(this->m_ctx, A)).first;
-        else                          it->second.updateData(A);
-        auto &buf = it->second;
+        else {
+            if (!it->second.allocated()) it->second = BufferObject(this->m_ctx, A); // former attribute at `loc` was a dummy/empty; we must allocate a real one.
+            else                         it->second.updateData(A);
+        }
+        const auto &buf = it->second;
         buf.bind(GL_ARRAY_BUFFER);
         glVertexAttribPointer(loc,
                               A.cols(), GL_FLOAT, // # cols floats per vertex
