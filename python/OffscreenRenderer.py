@@ -103,6 +103,8 @@ class Mesh:
         # per-corner data.
         self._activeReplicationIndices = None
 
+        self.vao = None
+
         self.setMesh(V, F, N, color)
 
     def _validateSizes(self, V, F, N, color):
@@ -128,7 +130,10 @@ class Mesh:
         self.F = F
         self._activeReplicationIndices = None
 
-        self.vao = VertexArrayObject(self.ctx)
+        if self.vao is None: # TODO: figure out why eliminating this check leads to a memory leak
+            # (It's definitely wasteful to keep deleting/recreating our VAO, but it shouldn't leak!)
+            self.vao = VertexArrayObject(self.ctx)
+
         if self.F is not None:
             self.vao.setIndexBuffer(self.F)
 
