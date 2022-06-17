@@ -32,7 +32,7 @@ template<typename T>
 struct BindSetUniform {
     template<class PyShader>
     static void run(PyShader &pyShader) {
-        pyShader.def("setUniform", &Shader::setUniform<T>, py::arg("name"), py::arg("val"));
+        pyShader.def("setUniform", &Shader::setUniform<T>, py::arg("name"), py::arg("val"), py::arg("optional") = false);
     }
 };
 
@@ -111,11 +111,11 @@ PYBIND11_MODULE(_offscreen_renderer, m) {
     py::class_<VertexArrayObject> pyVAO(m, "VertexArrayObject");
     pyVAO
         .def(py::init<std::shared_ptr<OpenGLContext>>(), py::arg("ctx"))
-        .def("setAttribute",     &VertexArrayObject::setAttribute,   py::arg("index"), py::arg("A"))
+        .def("setAttribute",     &VertexArrayObject::setAttribute,   py::arg("index"), py::arg("A"), py::arg("instanced") = false)
         .def("setIndexBuffer",   &VertexArrayObject::setIndexBuffer, py::arg("A"))
         .def("unsetIndexBuffer", &VertexArrayObject::unsetIndexBuffer)
         .def("bind", &VertexArrayObject::bind)
-        .def("draw", &VertexArrayObject::draw, py::arg("shader"))
+        .def("draw", &VertexArrayObject::draw, py::arg("shader"), py::arg("instances") = 1, py::arg("ignoreExtraneousAttributes") = false)
         .def_property_readonly("attributeBuffers", &VertexArrayObject::attributeBuffers, py::return_value_policy::reference)
         .def_property_readonly("indexBuffer",      &VertexArrayObject::indexBuffer,      py::return_value_policy::reference)
         ;

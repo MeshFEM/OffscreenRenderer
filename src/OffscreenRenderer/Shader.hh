@@ -167,7 +167,7 @@ struct Shader {
     void use() const { glUseProgram(m_prog.id); }
 
     template<typename T>
-    void setUniform(const std::string &name, const T &val) {
+    void setUniform(const std::string &name, const T &val, bool optional = false) {
         for (Uniform &u : m_uniforms) {
             if (u.name == name) {
                 use();
@@ -177,7 +177,7 @@ struct Shader {
                 return;
             }
         }
-        throw std::runtime_error("Uniform not present: " + name);
+        if (!optional) throw std::runtime_error("Uniform not present: " + name);
     }
 
     bool allUniformsSet() const {

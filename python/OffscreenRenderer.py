@@ -90,6 +90,8 @@ def lookAtMatrix(position, target, up):
 class Mesh:
     def __init__(self, ctx, V, F, N, color):
         self.ctx = ctx
+        self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                               SHADER_DIR + '/phong_with_wireframe.frag')
 
         self.alpha = 1.0 # Global opacity of the mesh
         self._meshColorOpaque = True # to be determined from the user-passed color
@@ -247,7 +249,7 @@ class Mesh:
         self.F = None
         self.vao.unsetIndexBuffer()
 
-    def render(self, shader, matView):
+    def render(self, matView):
         self.ctx.makeCurrent()
 
         # Sort triangles if needed
@@ -258,24 +260,48 @@ class Mesh:
         if self.lineWidth != 0: self.replicatePerCorner()
 
         modelViewMatrix = matView @ self.matModel
-        shader.setUniform('modelViewMatrix',   modelViewMatrix)
-        shader.setUniform('normalMatrix',      np.linalg.inv(modelViewMatrix[0:3, 0:3]).T)
+        self.shader.setUniform('modelViewMatrix',   modelViewMatrix)
+        self.shader.setUniform('normalMatrix',      np.linalg.inv(modelViewMatrix[0:3, 0:3]).T)
 
-        shader.setUniform('shininess',         self.shininess)
-        shader.setUniform('alpha',             self.alpha)
+        self.shader.setUniform('shininess',         self.shininess)
+        self.shader.setUniform('alpha',             self.alpha)
 
-        shader.setUniform('lineWidth',         self.lineWidth)
-        shader.setUniform('wireframeColor',    self.lineColor)
+        self.shader.setUniform('lineWidth',         self.lineWidth)
+        self.shader.setUniform('wireframeColor',    self.lineColor)
 
         # Any constant color configured is not part of the VAO state and must be set again to ensure it hasn't been overwritten
         if self.constColor: self.vao.setConstantAttribute(2, self.color)
-        self.vao.draw(shader)
+        self.vao.draw(self.shader)
+
+class VectorFieldMesh(Mesh):
+    def __init__(self, ctx, V, F, N, arrowPos, arrowVec, arrowColor,
+                 arrowRelativeScreenSize, arrowAlignment, targetDepth):
+        super().__init__(ctx, V, F, N, color=np.array([0, 0, 0, 0])) # color is overridden by arrowColor
+        self.vao.setAttribute(3, arrowPos  , instanced=True)
+        self.vao.setAttribute(4, arrowVec  , instanced=True)
+        self.vao.setAttribute(5, arrowColor, instanced=True)
+
+        self.instanceCount = arrowPos.shape[0]
+
+        self.shader = self.ctx.shaderLibrary().load(SHADER_DIR + '/vector_field.vert',
+                                                    SHADER_DIR + '/vector_field.frag')
+        self.shader.use()
+        self.shader.setUniform('arrowAlignment',          arrowAlignment)
+        self.shader.setUniform('arrowRelativeScreenSize', arrowRelativeScreenSize)
+        self.shader.setUniform('targetDepth',             targetDepth)
+
+    def render(self, matView):
+        self.ctx.makeCurrent()
+        modelViewMatrix = matView @ self.matModel
+        self.shader.use()
+        self.shader.setUniform('modelViewMatrix',   modelViewMatrix)
+        self.shader.setUniform('normalMatrix',      np.linalg.inv(modelViewMatrix[0:3, 0:3]).T)
+        self.shader.setUniform('alpha',             self.alpha)
+        self.vao.draw(self.shader, self.instanceCount, ignoreExtraneousAttributes=True) # `color` attribute is unused by vector field shader!
 
 class MeshRenderer:
     def __init__(self, width, height):
         self.ctx = OpenGLContext(width, height)
-        self.shader = self.ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
-                                                    SHADER_DIR + '/phong_with_wireframe.frag')
         self.meshes = []
 
         self.matView       = np.identity(4)
@@ -307,6 +333,11 @@ class MeshRenderer:
         By default, the new mesh becomes the active default one (index 0).
         """
         self.meshes.insert(0 if makeDefault else len(self.meshes), Mesh(self.ctx, V, F, N, color))
+
+    def addVectorFieldMesh(self, V, F, N, arrowPos, arrowVec, arrowColor,
+                           arrowRelativeScreenSize, arrowAlignment, targetDepth):
+        self.meshes.append(VectorFieldMesh(self.ctx, V, F, N, arrowPos, arrowVec, arrowColor,
+                           arrowRelativeScreenSize, arrowAlignment, targetDepth))
 
     def removeMesh(self, which):
         self.self.meshes.remove(self.meshes[which])
@@ -384,22 +415,24 @@ class MeshRenderer:
         self.ctx.blendFunc(GLenum.GL_SRC_ALPHA, GLenum.GL_ONE_MINUS_SRC_ALPHA,
                            GLenum.GL_ONE,       GLenum.GL_ONE_MINUS_SRC_ALPHA)
 
-        self.shader.use()
-        # Set mesh-independent attributes
-        self.shader.setUniform('projectionMatrix',  self.matProjection)
-
-        self.shader.setUniform('lightEyePos',       self.lightEyePos)
-        self.shader.setUniform('diffuseIntensity',  self.diffuseIntensity)
-        self.shader.setUniform('ambientIntensity',  self.ambientIntensity)
-        self.shader.setUniform('specularIntensity', self.specularIntensity)
 
         # Render the opaque meshes first
-        # This will result in a perfely rendered scene with N opaque objects and 1 transparent object.
+        # This will result in a perfectly rendered scene with N opaque objects and 1 transparent object.
         # Proper ordering of triangles of multiple transparent objects is not implemented.
         transparencySortedMeshes = sorted(self.meshes, key=lambda m: not m.isOpaque())
 
+        # Set mesh-independent shader attributes
+        for s in set([m.shader for m in transparencySortedMeshes]):
+            s.use()
+            s.setUniform('projectionMatrix',  self.matProjection)
+
+            s.setUniform('lightEyePos',       self.lightEyePos)
+            s.setUniform('diffuseIntensity',  self.diffuseIntensity)
+            s.setUniform('ambientIntensity',  self.ambientIntensity)
+            s.setUniform('specularIntensity', self.specularIntensity, optional=True)
+
         for mesh in transparencySortedMeshes:
-            mesh.render(self.shader, self.matView)
+            mesh.render(self.matView)
 
     def array(self      ): return self.ctx.array(     unpremultiply=self.transparentBackground)
     def image(self      ): return self.ctx.image(     unpremultiply=self.transparentBackground)

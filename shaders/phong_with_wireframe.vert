@@ -7,7 +7,6 @@
 layout (location = 0) in vec3  v_position; // bind v_position to attribute 0
 layout (location = 1) in vec3  v_normal;   // bind v_normal   to attribute 1
 layout (location = 2) in vec4  v_color;    // bind v_color    to attribute 2
-layout (location = 3) in float v_height;   // Height of this vertex above the opposte edge (needed for wireframe)
 
 // Transformation matrices
 uniform mat4 modelViewMatrix;

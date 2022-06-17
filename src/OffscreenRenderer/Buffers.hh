@@ -24,8 +24,8 @@ struct BufferObject : RAIIGLResource<BufferObject> {
     using Base::id;
 
     BufferObject() : Base(std::weak_ptr<OpenGLContext>()) { } // Allow creation of a dummy, unallocated buffer object not tied to any context
-    BufferObject(std::weak_ptr<OpenGLContext> ctx, Eigen::Ref<const MXfR > A) : Base(ctx) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
-    BufferObject(std::weak_ptr<OpenGLContext> ctx, Eigen::Ref<const MXuiR> A) : Base(ctx) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
+    BufferObject(std::weak_ptr<OpenGLContext> ctx, const Eigen::Ref<const MXfR > &A) : Base(ctx) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
+    BufferObject(std::weak_ptr<OpenGLContext> ctx, const Eigen::Ref<const MXuiR> &A) : Base(ctx) { glGenBuffers(1, &id); this->m_validateConstruction(); updateData(A); }
 
     void bind(GLenum target) const { glBindBuffer(target, id); }
 
@@ -58,9 +58,11 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
     }
 
     // Create/update a buffer with data for attribute `loc`.
-    // Each row of A is interpreted as a vertex attribute,
-    // so A's column size determines the attribute size.
-    void setAttribute(int loc, Eigen::Ref<const MXfR> A) {
+    // Each row of A is interpreted as a vertex attribute, so A's column size
+    // determines the attribute size.
+    // If `instanced` is `true` the buffer is interpreted as holding per-instance
+    // rather than per-vertex data.
+    void setAttribute(int loc, const Eigen::Ref<const MXfR> &A, bool instanced = false) {
         bind();
         auto it = m_attributes.find(loc);
         if (it == m_attributes.end()) it = m_attributes.emplace(loc, BufferObject(this->m_ctx, A)).first;
@@ -74,6 +76,8 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
                               A.cols(), GL_FLOAT, // # cols floats per vertex
                               GL_FALSE,  // Don't normalize
                               0, 0); // No gap between vertex data, and no offset from array beginning.
+        if (instanced)
+            glVertexAttribDivisor(loc, 1);
         glCheckError();
         glEnableVertexAttribArray(loc);
         glCheckError();
@@ -97,7 +101,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
         glCheckError();
     }
 
-    void setIndexBuffer(Eigen::Ref<const MXuiR> A) {
+    void setIndexBuffer(const Eigen::Ref<const MXuiR> &A) {
         bind();
         glCheckError();
         Eigen::Map<const Eigen::Matrix<unsigned int, Eigen::Dynamic, 1>> flatA(A.data(), A.size());
@@ -115,7 +119,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
 
     void bind() const { glBindVertexArray(id); }
 
-    void draw(const Shader &s) const {
+    void draw(const Shader &s, size_t instances = 1, bool ignoreExtraneousAttributes = false) const {
         size_t numChecked = 0;
         for (const auto &attr : s.getAttributes()) {
             if (m_attributes.count(attr.loc)) ++numChecked;
@@ -123,7 +127,7 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
                 throw std::runtime_error("Attribute " + std::to_string(attr.loc) + " (" + attr.name + ") is not set in VAO");
             }
         }
-        if (numChecked != m_attributes.size()) throw std::runtime_error("Extraneous attributes found in VAO");
+        if (!ignoreExtraneousAttributes && (numChecked != m_attributes.size())) throw std::runtime_error("Extraneous attributes found in VAO");
         if (!s.allUniformsSet()) {
             std::string msg = "Unset uniform(s):";
             for (const Uniform &u : s.getUniforms())
@@ -139,11 +143,11 @@ struct VertexArrayObject : RAIIGLResource<VertexArrayObject> {
 
         if (m_indexBuffer.allocated()) {
             // std::cout << "glDrawElements (indexed)" << std::endl;
-            glDrawElements(GL_TRIANGLES, m_indexBuffer.count(), GL_UNSIGNED_INT, NULL);
+            glDrawElementsInstanced(GL_TRIANGLES, m_indexBuffer.count(), GL_UNSIGNED_INT, NULL, instances);
         }
         else {
             // std::cout << "glDrawArrays (unindexed)" << std::endl;
-            glDrawArrays(GL_TRIANGLES, 0, m_attributes.at(0).count());
+            glDrawArraysInstanced(GL_TRIANGLES, 0, m_attributes.at(0).count(), instances);
         }
         glCheckError();
     }
