@@ -216,7 +216,6 @@ class Mesh:
         if self.constColor:
             self.vao.setConstantAttribute(2, color)
             self._meshColorOpaque = (len(color) == 3) or (color[3] == 1.0)
-            print('set const color: ', color)
         else:
             self.vao.setAttribute(2, color)
             self._meshColorOpaque = (color.shape[1] == 3) or (color[:, 3].min() == 1.0)
