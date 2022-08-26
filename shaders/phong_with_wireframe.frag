@@ -11,12 +11,12 @@ uniform float shininess;
 uniform float alpha;    // Transparency
 
 uniform float lineWidth;
-uniform vec4  wireframeColor;
 
 // Fragment shader inputs
 in vec3 v2f_eyePos;
 in vec3 v2f_eyeNormal;
 in vec4 v2f_color; // Used for ambient, specular, and diffuse reflection constants
+in vec4 v2f_wireframe_color;
 
 // For drawing wireframe
 noperspective in vec3 v2f_barycentric; // Barycentric coordinate functions.
@@ -44,7 +44,7 @@ void main() {
         // infer height above each triangle edge using (norms of) barycentrentric coordinate gradients.
         vec3 h = v2f_barycentric / sqrt(pow(dFdx(v2f_barycentric), vec3(2.0)) + pow(dFdy(v2f_barycentric), vec3(2.0)));
         float dist = min(min(h.x, h.y), h.z) - 0.5 * lineWidth; // Distance to line border (at lineWidth/2 above h=0)
-        color = mix(color, wireframeColor,
+        color = mix(color, v2f_wireframe_color,
                     exp(-pow(max(dist + 0.9124443057840285280, 0.0), 4))); // dist + log(2)^(1/4) centers transition from 1 to 0 around the edge.
     }
 

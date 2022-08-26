@@ -93,6 +93,10 @@ class Mesh:
         self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
                                                SHADER_DIR + '/phong_with_wireframe.frag')
 
+        # The triangle index array in active use to replicate vertex data to
+        # per-corner data.
+        self._activeReplicationIndices = None
+
         self.alpha = 1.0 # Global opacity of the mesh
         self._meshColorOpaque = True # to be determined from the user-passed color
         self._sorted = False
@@ -100,10 +104,6 @@ class Mesh:
         self.setWireframe(0.0)
         self.matModel = np.identity(4)
         self.shininess = 20.0
-
-        # The triangle index array in active use to replicate vertex data to
-        # per-corner data.
-        self._activeReplicationIndices = None
 
         self.vao = None
 
@@ -116,7 +116,7 @@ class Mesh:
         nv = self.numVertices
         if len(V) != nv:                      raise Exception(f'Unexpected vertex array size {len(V)} vs {nv} (use setMesh if changing connectivity)')
         if len(N) != nv:                      raise Exception(f'Unexpected normal array size {len(N)} vs {nv} (must be per-vertex)')
-        if not ccolor and (len(color) != nv): raise Exception(f'Unexpected `color` size {len(N)} vs {nv} (must be per-vertex or constant)')
+        if not ccolor and (len(color) != nv): raise Exception(f'Unexpected `color` size {len(color)} vs {nv} (must be per-vertex or constant)')
         if F is not None and F.max() >= nv:   raise Exception('Corner index out of bounds')
 
     def setMesh(self, V, F, N, color):
@@ -232,7 +232,23 @@ class Mesh:
 
     def setWireframe(self, lineWidth = 1.0, color = [0.0, 0.0, 0.0, 1.0]):
         self.lineWidth = lineWidth
-        self.lineColor = color
+
+        color = decodeColor(color)
+        ccolor = len(np.ravel(color)) in [3, 4]
+
+        if (ccolor):
+            self.constWFColor = color
+            if ((len(color) == 4) and (color[3] < 1.0)):
+                self._meshColorOpaque = False
+        else:
+            if (len(color) != self.numVertices): raise Exception(f'Unexpected `color` size {len(color)} vs {self.numVertices} (must be per-vertex or constant)')
+            # Replicate the data to per-corner if in replication mode.
+            if self._activeReplicationIndices is not None:
+                color = color[self._activeReplicationIndices]
+            self.constWFColor = None
+            self.vao.setAttribute(3, color)
+            if ((color.shape[1] == 4) and (color[:, 3].min() < 1.0)):
+                self._meshColorOpaque = False
 
     def replicatePerCorner(self):
         self.ctx.makeCurrent()
@@ -266,10 +282,12 @@ class Mesh:
         self.shader.setUniform('alpha',             self.alpha)
 
         self.shader.setUniform('lineWidth',         self.lineWidth)
-        self.shader.setUniform('wireframeColor',    self.lineColor)
 
         # Any constant color configured is not part of the VAO state and must be set again to ensure it hasn't been overwritten
         if self.constColor: self.vao.setConstantAttribute(2, self.color)
+
+        if self.constWFColor is not None: self.vao.setConstantAttribute(3, self.constWFColor)
+
         self.vao.draw(self.shader)
 
 class VectorFieldMesh(Mesh):
@@ -339,7 +357,7 @@ class MeshRenderer:
                            arrowRelativeScreenSize, arrowAlignment, targetDepth))
 
     def removeMesh(self, which):
-        self.self.meshes.remove(self.meshes[which])
+        self.meshes.remove(self.meshes[which])
 
     def modelMatrix(self, position, scale, quaternion, which = 0):
         self.meshes[which].modelMatrix(position, scale, quaternion)
