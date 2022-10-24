@@ -163,12 +163,14 @@ struct OpenGLContext {
         }
     }
 
-#if PNG_WRITER
     void writePNG(const std::string &path, bool unpremultiply = true) const {
+#if PNG_WRITER
         const ImageBuffer &buf = unpremultiply ? unpremultipliedBuffer() : buffer();
         write_png_RGBA(path, m_width, m_height, buf.data(), /* verticalFlip = */ true);
-    }
+#else
+        throw std::runtime_error("writePNG enabled because libpng is not available");
 #endif
+    }
 
     virtual ~OpenGLContext()  { }
 
