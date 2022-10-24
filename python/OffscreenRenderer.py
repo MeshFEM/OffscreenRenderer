@@ -437,6 +437,11 @@ class MeshRenderer:
     def image(self      ): return self.ctx.image(     unpremultiply=self.transparentBackground)
     def  save(self, path): return self.ctx.save(path, unpremultiply=self.transparentBackground)
 
+    def scaledImage(self, scaleFactor):
+        img = self.image()
+        return img.resize((int(img.width * scaleFactor),
+                           int(img.height * scaleFactor)))
+
     def renderAnimation(self, outPath, nframes, frameCallback, *videoWriterArgs, **videoWriterKWargs):
         """
         Write an animation out as a video/image sequence, where each frame is set up by `frameCallback`

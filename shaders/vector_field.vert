@@ -28,7 +28,7 @@ uniform mat4 projectionMatrix;
 uniform mat3 normalMatrix;
 
 // output
-varying vec4 v2f_color;
+out vec4 v2f_color;
 
 void main() {
     mat3 rotmag; // rotation matrix scaled by the vector magnitude

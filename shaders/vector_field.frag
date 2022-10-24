@@ -1,8 +1,10 @@
 // Shader for instanced vector field rendering.
 // Author:  Julian Panetta (jpanetta), julian.panetta@gmail.com
 #version 140
-varying vec4 v2f_color;
+in vec4 v2f_color;
+out vec4 result;
+
 void main() {
     // Gouraud shading
-    gl_FragColor = v2f_color;
+    result = v2f_color;
 }

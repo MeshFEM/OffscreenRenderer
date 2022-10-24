@@ -49,7 +49,11 @@ struct CGLWrapper : public OpenGLContext {
 
         m_makeCurrent();
 
-        std::cout << glGetString(GL_VERSION) << std::endl;
+        static bool firstTime = true;
+        if (firstTime) {
+            std::cout << glGetString(GL_VERSION) << std::endl;
+            firstTime = false;
+        }
 
         // Initialize GLEW entry points for our new context
         m_glewInit();
