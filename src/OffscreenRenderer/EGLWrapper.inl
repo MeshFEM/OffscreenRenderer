@@ -113,7 +113,7 @@ private:
             EGL_NONE
         };
         m_ctx = eglCreateContext(m_display.get(), m_config, EGL_NO_CONTEXT, contextAttribs);
-        if (!m_surf) throw std::runtime_error("eglCreateContext failed");
+        if (!m_ctx) throw std::runtime_error("eglCreateContext failed");
 
         EGLint version;
         eglQueryContext(m_display.get(), m_ctx, EGL_CONTEXT_CLIENT_VERSION, &version);
