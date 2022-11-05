@@ -460,7 +460,7 @@ class MeshRenderer:
         return img.resize((int(img.width * scaleFactor),
                            int(img.height * scaleFactor)))
 
-    def renderAnimation(self, outPath, nframes, frameCallback, *videoWriterArgs, **videoWriterKWargs):
+    def renderAnimation(self, outPath, nframes, frameCallback, display=False, *videoWriterArgs, **videoWriterKWargs):
         """
         Write an animation out as a video/image sequence, where each frame is set up by `frameCallback`
         """
@@ -469,11 +469,15 @@ class MeshRenderer:
             frameCallback(self, frame)
             vw.writeFrame()
 
-    def orbitAnimation(self, outPath, nframes, axis=None, *videoWriterArgs, **videoWriterKWargs):
+        if display:
+            from IPython.display import Video
+            return Video(outPath)
+
+    def orbitAnimation(self, outPath, nframes, axis=None, display=False, *videoWriterArgs, **videoWriterKWargs):
         """
         Render an animation of the camera making a full orbit around the up axis centered at its target.
         """
         pos, tgt, up = np.array(self.cam_position), np.array(self.cam_target), np.array(self.cam_up)
         if axis is None: axis = up.copy()
         def c(r, i): r.orbitedLookAt(pos, tgt, up, axis, 2 * np.pi / nframes * i)
-        self.renderAnimation(outPath, nframes, c, *videoWriterArgs, **videoWriterKWargs)
+        return self.renderAnimation(outPath, nframes, c, display, *videoWriterArgs, **videoWriterKWargs)
