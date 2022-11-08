@@ -462,7 +462,7 @@ class MeshRenderer:
 
     def renderAnimation(self, outPath, nframes, frameCallback, display=False, *videoWriterArgs, **videoWriterKWargs):
         """
-        Write an animation out as a video/image sequence, where each frame is set up by `frameCallback`
+        Write an animation out as a video/image sequence, where each frame is set up by `frameCallback(renderer, frame_num)`
         """
         vw = video_writer.MeshRendererVideoWriter(outPath, self, *videoWriterArgs, **videoWriterKWargs)
         for frame in range(nframes):
