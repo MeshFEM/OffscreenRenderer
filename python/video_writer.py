@@ -26,6 +26,8 @@ class VideoWriter:
         self.framerate    = framerate
         self.frameCounter = 0
 
+        quality = '-crf 23' if quality is None else quality
+
         self.ffmpegProc = None
 
         if codec == Codec.ImgSeq:
@@ -106,8 +108,8 @@ class MeshRendererVideoWriter(VideoWriter):
     """
     Creates an image sequence or a compressed video from  a MeshRenderer
     """
-    def __init__(self, outPath, mrenderer, codec=Codec.H264, framerate=30, streaming=False, outWidth=None, outHeight=None):
-        super().__init__(outPath, mrenderer.ctx.width, mrenderer.ctx.height, codec=codec, framerate=framerate, streaming=streaming, outWidth=outWidth, outHeight=outHeight)
+    def __init__(self, outPath, mrenderer, codec=Codec.H264, framerate=30, streaming=False, outWidth=None, outHeight=None, quality=None):
+        super().__init__(outPath, mrenderer.ctx.width, mrenderer.ctx.height, codec=codec, framerate=framerate, streaming=streaming, outWidth=outWidth, outHeight=outHeight, quality=quality)
         self.mrenderer = mrenderer
         if codec != Codec.ImgSeq:
             # FFmpeg doesn't support transparent H264/HEVC output--it just
@@ -126,13 +128,13 @@ class PlotVideoWriter(VideoWriter):
     """
     Creates an image sequence or a compressed video from  a MeshRenderer
     """
-    def __init__(self, outPath, fig, dpi = 72, codec=Codec.H264, framerate=30, streaming=False, outWidth=None, outHeight=None):
+    def __init__(self, outPath, fig, dpi = 72, codec=Codec.H264, framerate=30, streaming=False, outWidth=None, outHeight=None, quality=None):
         fig.set_dpi(dpi)
         self.dpi = dpi
         fig.tight_layout()
         fig.canvas.draw()
         fig.canvas.buffer_rgba().tobytes()
-        super().__init__(outPath, *fig.canvas.get_width_height(), codec=codec, framerate=framerate, streaming=streaming, outWidth=outWidth, outHeight=outHeight)
+        super().__init__(outPath, *fig.canvas.get_width_height(), codec=codec, framerate=framerate, streaming=streaming, outWidth=outWidth, outHeight=outHeight, quality=quality)
 
     def writeFrame(self, fig):
         """
