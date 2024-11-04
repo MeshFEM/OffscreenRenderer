@@ -55,6 +55,7 @@ def hexColorToFloat(c):
     them to OpenGL-compatible float arrays.
     """
     if not isinstance(c, str): return c
+    if len(c) == 4: c = '#' + ''.join([c[i] * 2 for i in range(1, 4)])
     if len(c) != 7: raise Exception('Invalid hex color')
     return np.array([int(c[i:i+2], 16) / 255 for i in range(1, len(c), 2)])
 
@@ -65,7 +66,7 @@ def decodeColor(c):
     """
     import colors
     if isinstance(c, str):
-        if c[0] == '#' and len(c) == 7:
+        if c[0] == '#' and len(c) in [4, 7]:
             c = hexColorToFloat(c)
         elif c in colors.x11_colors:
             c = hexColorToFloat(colors.x11_colors[c])
