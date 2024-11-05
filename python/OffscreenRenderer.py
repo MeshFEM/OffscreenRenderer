@@ -294,7 +294,7 @@ class Mesh:
 class VectorFieldMesh(Mesh):
     def __init__(self, ctx, V, F, N, arrowPos, arrowVec, arrowColor,
                  arrowRelativeScreenSize, arrowAlignment, targetDepth):
-        super().__init__(ctx, V, F, N, color=np.array([0, 0, 0, 0])) # color is overridden by arrowColor
+        super().__init__(ctx, V, F, N, color=np.array([0, 0, 0, 1])) # color is overridden by arrowColor; but set alpha to 1.0 (opaque) to ensure vector field is drawn before transparent objects
         self.vao.setAttribute(3, arrowPos  , instanced=True)
         self.vao.setAttribute(4, arrowVec  , instanced=True)
         self.vao.setAttribute(5, arrowColor, instanced=True)
