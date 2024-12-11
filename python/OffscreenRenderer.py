@@ -117,7 +117,7 @@ class Mesh:
         if len(V) != nv:                      raise Exception(f'Unexpected vertex array size {len(V)} vs {nv} (use setMesh if changing connectivity)')
         if len(N) != nv:                      raise Exception(f'Unexpected normal array size {len(N)} vs {nv} (must be per-vertex)')
         if not ccolor and (len(color) != nv): raise Exception(f'Unexpected `color` size {len(color)} vs {nv} (must be per-vertex or constant)')
-        if F is not None and F.max() >= nv:   raise Exception('Corner index out of bounds')
+        if F is not None and len(F) > 0 and F.max() >= nv: raise Exception('Corner index out of bounds')
 
     def setMesh(self, V, F, N, color):
         """
