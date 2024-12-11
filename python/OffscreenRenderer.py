@@ -55,6 +55,7 @@ def hexColorToFloat(c):
     them to OpenGL-compatible float arrays.
     """
     if not isinstance(c, str): return c
+    if len(c) == 4: c = '#' + ''.join([c[i] * 2 for i in range(1, 4)])
     if len(c) != 7: raise Exception('Invalid hex color')
     return np.array([int(c[i:i+2], 16) / 255 for i in range(1, len(c), 2)])
 
@@ -65,7 +66,7 @@ def decodeColor(c):
     """
     import colors
     if isinstance(c, str):
-        if c[0] == '#' and len(c) == 7:
+        if c[0] == '#' and len(c) in [4, 7]:
             c = hexColorToFloat(c)
         elif c in colors.x11_colors:
             c = hexColorToFloat(colors.x11_colors[c])
@@ -293,7 +294,7 @@ class Mesh:
 class VectorFieldMesh(Mesh):
     def __init__(self, ctx, V, F, N, arrowPos, arrowVec, arrowColor,
                  arrowRelativeScreenSize, arrowAlignment, targetDepth):
-        super().__init__(ctx, V, F, N, color=np.array([0, 0, 0, 0])) # color is overridden by arrowColor
+        super().__init__(ctx, V, F, N, color=np.array([0, 0, 0, 1])) # color is overridden by arrowColor; but set alpha to 1.0 (opaque) to ensure vector field is drawn before transparent objects
         self.vao.setAttribute(3, arrowPos  , instanced=True)
         self.vao.setAttribute(4, arrowVec  , instanced=True)
         self.vao.setAttribute(5, arrowColor, instanced=True)
