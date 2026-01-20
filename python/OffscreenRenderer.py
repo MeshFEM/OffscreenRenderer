@@ -89,10 +89,15 @@ def lookAtMatrix(position, target, up):
     return matView
 
 class Mesh:
-    def __init__(self, ctx, V, F, N, color):
+    def __init__(self, ctx, V, F, N, color, use_ssao=False):
         self.ctx = ctx
-        self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
-                                               SHADER_DIR + '/phong_with_wireframe.frag')
+        self.use_ssao = use_ssao
+        if use_ssao:
+            self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                                   SHADER_DIR + '/phong_with_wireframe_ssao.frag')
+        else:
+            self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                                   SHADER_DIR + '/phong_with_wireframe.frag')
 
         # The triangle index array in active use to replicate vertex data to
         # per-corner data.
@@ -105,6 +110,12 @@ class Mesh:
         self.setWireframe(0.0)
         self.matModel = np.identity(4)
         self.shininess = 20.0
+        
+        # SSAO parameters
+        self.ssaoEnabled = use_ssao
+        self.ssaoRadius = 0.5
+        self.ssaoBias = 0.025
+        self.ssaoSamples = 16
 
         self.vao = None
 
@@ -283,6 +294,13 @@ class Mesh:
         self.shader.setUniform('alpha',             self.alpha)
 
         self.shader.setUniform('lineWidth',         self.lineWidth)
+        
+        # Set SSAO uniforms if using SSAO shader
+        if self.use_ssao:
+            self.shader.setUniform('ssaoEnabled',   self.ssaoEnabled)
+            self.shader.setUniform('ssaoRadius',    self.ssaoRadius, optional=True)
+            self.shader.setUniform('ssaoBias',      self.ssaoBias, optional=True)
+            self.shader.setUniform('ssaoSamples',   self.ssaoSamples, optional=True)
 
         # Any constant color configured is not part of the VAO state and must be set again to ensure it hasn't been overwritten
         if self.constColor: self.vao.setConstantAttribute(2, self.color)
@@ -332,6 +350,15 @@ class MeshRenderer:
         self.specularIntensity = 1.0 * white
 
         self.transparentBackground = True
+        
+        # SSAO settings
+        self.ssaoEnabled = False
+        self.ssaoRadius = 0.5
+        self.ssaoBias = 0.025
+        self.ssaoSamples = 16
+        
+        # Ground plane settings
+        self.infiniteGroundPlane = None
 
     def resize(self, width, height):
         self.ctx.resize(width, height)
@@ -342,15 +369,20 @@ class MeshRenderer:
         `F` can be `None` to disable indexed face set representation
         (i.e., to use glDrawArrays instead of glDrawElements)
         """
-        if len(self.meshes) == 0: self.meshes = [Mesh(self.ctx, V, F, N, color)]
-        else: self.meshes[which].setMesh(V, F, N, color)
+        if len(self.meshes) == 0: 
+            self.meshes = [Mesh(self.ctx, V, F, N, color, use_ssao=self.ssaoEnabled)]
+        else: 
+            self.meshes[which].setMesh(V, F, N, color)
 
-    def addMesh(self, V, F, N, color, makeDefault = True):
+    def addMesh(self, V, F, N, color, makeDefault = True, use_ssao=None):
         """
         Add a mesh to the scene. Arguments are the same as `setMesh`.
         By default, the new mesh becomes the active default one (index 0).
+        If use_ssao is None, uses the renderer's ssaoEnabled setting.
         """
-        self.meshes.insert(0 if makeDefault else len(self.meshes), Mesh(self.ctx, V, F, N, color))
+        if use_ssao is None:
+            use_ssao = self.ssaoEnabled
+        self.meshes.insert(0 if makeDefault else len(self.meshes), Mesh(self.ctx, V, F, N, color, use_ssao=use_ssao))
 
     def addVectorFieldMesh(self, V, F, N, arrowPos, arrowVec, arrowColor,
                            arrowRelativeScreenSize, arrowAlignment, targetDepth):
@@ -433,6 +465,13 @@ class MeshRenderer:
         self.ctx.blendFunc(GLenum.GL_SRC_ALPHA, GLenum.GL_ONE_MINUS_SRC_ALPHA,
                            GLenum.GL_ONE,       GLenum.GL_ONE_MINUS_SRC_ALPHA)
 
+        # Sync SSAO settings to all meshes that support it
+        for mesh in self.meshes:
+            if hasattr(mesh, 'ssaoEnabled'):
+                mesh.ssaoEnabled = self.ssaoEnabled
+                mesh.ssaoRadius = self.ssaoRadius
+                mesh.ssaoBias = self.ssaoBias
+                mesh.ssaoSamples = self.ssaoSamples
 
         # Render the opaque meshes first
         # This will result in a perfectly rendered scene with N opaque objects and 1 transparent object.
@@ -460,6 +499,78 @@ class MeshRenderer:
         img = self.image()
         return img.resize((int(img.width * scaleFactor),
                            int(img.height * scaleFactor)))
+    
+    def enableSSAO(self, enabled=True, radius=0.5, bias=0.025, samples=16):
+        """
+        Enable or disable Screen-Space Ambient Occlusion (SSAO).
+        
+        Parameters:
+        - enabled: Whether to enable SSAO
+        - radius: The radius of the SSAO sampling sphere
+        - bias: Bias to prevent self-shadowing artifacts
+        - samples: Number of samples to take (limited to 16 in shader)
+        """
+        self.ssaoEnabled = enabled
+        self.ssaoRadius = radius
+        self.ssaoBias = bias
+        self.ssaoSamples = min(samples, 16)
+        
+        # Update SSAO settings for existing meshes
+        for mesh in self.meshes:
+            if hasattr(mesh, 'ssaoEnabled'):
+                mesh.ssaoEnabled = enabled
+                mesh.ssaoRadius = radius
+                mesh.ssaoBias = bias
+                mesh.ssaoSamples = min(samples, 16)
+    
+    def addInfiniteGroundPlane(self, z=0.0, size=1000.0, color=[0.8, 0.8, 0.8], only_show_ao=False):
+        """
+        Add an infinite ground plane at the specified z-coordinate.
+        The plane only displays ambient occlusion (no direct lighting).
+        
+        Parameters:
+        - z: Z-coordinate of the ground plane
+        - size: Size of the ground plane (should be large enough to appear infinite)
+        - color: Color of the ground plane
+        - only_show_ao: If True, the plane is invisible except for AO shadows
+        """
+        # Create a large quad at z=0
+        half_size = size / 2
+        V = np.array([
+            [-half_size, -half_size, z],
+            [ half_size, -half_size, z],
+            [ half_size,  half_size, z],
+            [-half_size,  half_size, z]
+        ])
+        
+        F = np.array([
+            [0, 1, 2],
+            [0, 2, 3]
+        ], dtype=np.uint32)
+        
+        # Normal pointing up (positive z)
+        N = np.array([
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 0, 1],
+            [0, 0, 1]
+        ])
+        
+        # If only_show_ao is True, make the plane transparent/invisible in color
+        if only_show_ao:
+            plane_color = [0, 0, 0, 0]  # Fully transparent
+        else:
+            plane_color = color if len(color) == 4 else list(color) + [1.0]
+        
+        # Add the ground plane mesh with SSAO enabled
+        self.addMesh(V, F, N, plane_color, makeDefault=False, use_ssao=True)
+        self.infiniteGroundPlane = self.meshes[-1]
+        
+        # Enable SSAO for the ground plane
+        self.infiniteGroundPlane.ssaoEnabled = True
+        self.infiniteGroundPlane.ssaoRadius = self.ssaoRadius
+        self.infiniteGroundPlane.ssaoBias = self.ssaoBias
+        self.infiniteGroundPlane.ssaoSamples = self.ssaoSamples
 
     def renderAnimation(self, outPath, nframes, frameCallback, display=False, *videoWriterArgs, **videoWriterKWargs):
         """
