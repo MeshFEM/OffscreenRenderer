@@ -13,10 +13,10 @@ uniform float alpha;    // Transparency
 uniform float lineWidth;
 
 // SSAO parameters
-uniform bool ssaoEnabled;
+uniform float ssaoEnabled;  // Use float instead of bool for compatibility (0.0 = off, 1.0 = on)
 uniform float ssaoRadius;
 uniform float ssaoBias;
-uniform int ssaoSamples;
+uniform float ssaoSamples;
 
 // Fragment shader inputs
 in vec3 v2f_eyePos;
@@ -30,37 +30,33 @@ noperspective in vec3 v2f_barycentric; // Barycentric coordinate functions.
 // Fragment shader output (pixel color)
 out vec4 result;
 
-// Simple pseudo-random function for SSAO sampling
-float rand(vec2 co){
-    return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453);
-}
-
 // Simple SSAO approximation using screen-space derivatives
 float computeSSAO() {
-    if (!ssaoEnabled) return 1.0;
-    
-    vec3 N = normalize(v2f_eyeNormal);
-    vec3 V = normalize(-v2f_eyePos);
+    if (ssaoEnabled < 0.5) return 1.0;
     
     // Use depth-based occlusion approximation
     // This is a simplified SSAO that works without additional render passes
-    float depth = length(v2f_eyePos);
     vec3 ddxPos = dFdx(v2f_eyePos);
     vec3 ddyPos = dFdy(v2f_eyePos);
     
-    // Sample surrounding geometry using derivatives
+    // Simple ambient occlusion based on local geometry curvature
     float occlusion = 0.0;
-    int samples = min(ssaoSamples, 16); // Limit samples for performance
+    int samples = int(min(ssaoSamples, 16.0));
     
-    for (int i = 0; i < samples; i++) {
-        float angle = float(i) * 3.14159265 * 2.0 / float(samples);
-        vec2 offset = vec2(cos(angle), sin(angle)) * ssaoRadius;
+    for (int i = 0; i < 16; i++) {
+        if (i >= samples) break;
+        
+        float angle = float(i) * 0.39269908; // 2*PI / 16
+        float cosA = cos(angle);
+        float sinA = sin(angle);
+        vec2 offset = vec2(cosA, sinA) * ssaoRadius;
         
         vec3 samplePos = v2f_eyePos + ddxPos * offset.x + ddyPos * offset.y;
         float sampleDepth = length(samplePos);
+        float currentDepth = length(v2f_eyePos);
         
         // Simple depth comparison
-        if (sampleDepth < depth - ssaoBias) {
+        if (sampleDepth < currentDepth - ssaoBias) {
             occlusion += 1.0;
         }
     }

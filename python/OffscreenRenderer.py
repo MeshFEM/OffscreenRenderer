@@ -92,12 +92,9 @@ class Mesh:
     def __init__(self, ctx, V, F, N, color, use_ssao=False):
         self.ctx = ctx
         self.use_ssao = use_ssao
-        if use_ssao:
-            self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
-                                                   SHADER_DIR + '/phong_with_wireframe_ssao.frag')
-        else:
-            self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
-                                                   SHADER_DIR + '/phong_with_wireframe.frag')
+        # For now, always use regular shader and we'll add SSAO later
+        self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                               SHADER_DIR + '/phong_with_wireframe.frag')
 
         # The triangle index array in active use to replicate vertex data to
         # per-corner data.
@@ -111,11 +108,11 @@ class Mesh:
         self.matModel = np.identity(4)
         self.shininess = 20.0
         
-        # SSAO parameters
-        self.ssaoEnabled = use_ssao
+        # SSAO parameters (use floats for shader compatibility)
+        self.ssaoEnabled = 1.0 if use_ssao else 0.0
         self.ssaoRadius = 0.5
         self.ssaoBias = 0.025
-        self.ssaoSamples = 16
+        self.ssaoSamples = 16.0
 
         self.vao = None
 
@@ -295,12 +292,11 @@ class Mesh:
 
         self.shader.setUniform('lineWidth',         self.lineWidth)
         
-        # Set SSAO uniforms if using SSAO shader
-        if self.use_ssao:
-            self.shader.setUniform('ssaoEnabled',   self.ssaoEnabled)
-            self.shader.setUniform('ssaoRadius',    self.ssaoRadius, optional=True)
-            self.shader.setUniform('ssaoBias',      self.ssaoBias, optional=True)
-            self.shader.setUniform('ssaoSamples',   self.ssaoSamples, optional=True)
+        # Set SSAO uniforms (shader always supports SSAO, but we can disable it)
+        self.shader.setUniform('ssaoEnabled',   self.ssaoEnabled, optional=True)
+        self.shader.setUniform('ssaoRadius',    self.ssaoRadius, optional=True)
+        self.shader.setUniform('ssaoBias',      self.ssaoBias, optional=True)
+        self.shader.setUniform('ssaoSamples',   self.ssaoSamples, optional=True)
 
         # Any constant color configured is not part of the VAO state and must be set again to ensure it hasn't been overwritten
         if self.constColor: self.vao.setConstantAttribute(2, self.color)
@@ -351,11 +347,11 @@ class MeshRenderer:
 
         self.transparentBackground = True
         
-        # SSAO settings
-        self.ssaoEnabled = False
+        # SSAO settings (use floats for shader compatibility)
+        self.ssaoEnabled = 0.0  # Default: disabled
         self.ssaoRadius = 0.5
         self.ssaoBias = 0.025
-        self.ssaoSamples = 16
+        self.ssaoSamples = 16.0
         
         # Ground plane settings
         self.infiniteGroundPlane = None
@@ -510,18 +506,18 @@ class MeshRenderer:
         - bias: Bias to prevent self-shadowing artifacts
         - samples: Number of samples to take (limited to 16 in shader)
         """
-        self.ssaoEnabled = enabled
-        self.ssaoRadius = radius
-        self.ssaoBias = bias
-        self.ssaoSamples = min(samples, 16)
+        self.ssaoEnabled = 1.0 if enabled else 0.0
+        self.ssaoRadius = float(radius)
+        self.ssaoBias = float(bias)
+        self.ssaoSamples = float(min(samples, 16))
         
         # Update SSAO settings for existing meshes
         for mesh in self.meshes:
             if hasattr(mesh, 'ssaoEnabled'):
-                mesh.ssaoEnabled = enabled
-                mesh.ssaoRadius = radius
-                mesh.ssaoBias = bias
-                mesh.ssaoSamples = min(samples, 16)
+                mesh.ssaoEnabled = 1.0 if enabled else 0.0
+                mesh.ssaoRadius = float(radius)
+                mesh.ssaoBias = float(bias)
+                mesh.ssaoSamples = float(min(samples, 16))
     
     def addInfiniteGroundPlane(self, z=0.0, size=1000.0, color=[0.8, 0.8, 0.8], only_show_ao=False):
         """
@@ -567,7 +563,7 @@ class MeshRenderer:
         self.infiniteGroundPlane = self.meshes[-1]
         
         # Enable SSAO for the ground plane
-        self.infiniteGroundPlane.ssaoEnabled = True
+        self.infiniteGroundPlane.ssaoEnabled = 1.0  # Always enable for ground plane
         self.infiniteGroundPlane.ssaoRadius = self.ssaoRadius
         self.infiniteGroundPlane.ssaoBias = self.ssaoBias
         self.infiniteGroundPlane.ssaoSamples = self.ssaoSamples
