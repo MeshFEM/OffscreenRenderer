@@ -43,10 +43,12 @@ float computeSSAO() {
     float occlusion = 0.0;
     int samples = int(min(ssaoSamples, 16.0));
     
+    const float TWO_PI = 6.283185307;
+    
     for (int i = 0; i < 16; i++) {
         if (i >= samples) break;
         
-        float angle = float(i) * 0.39269908; // 2*PI / 16
+        float angle = float(i) * (TWO_PI / 16.0);
         float cosA = cos(angle);
         float sinA = sin(angle);
         vec2 offset = vec2(cosA, sinA) * ssaoRadius;

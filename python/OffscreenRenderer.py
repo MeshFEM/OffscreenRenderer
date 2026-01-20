@@ -92,9 +92,13 @@ class Mesh:
     def __init__(self, ctx, V, F, N, color, use_ssao=False):
         self.ctx = ctx
         self.use_ssao = use_ssao
-        # For now, always use regular shader and we'll add SSAO later
-        self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
-                                               SHADER_DIR + '/phong_with_wireframe.frag')
+        # Load SSAO shader if requested, otherwise use regular shader
+        if use_ssao:
+            self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                                   SHADER_DIR + '/phong_with_wireframe_ssao.frag')
+        else:
+            self.shader = ctx.shaderLibrary().load(SHADER_DIR + '/phong_with_wireframe.vert',
+                                                   SHADER_DIR + '/phong_with_wireframe.frag')
 
         # The triangle index array in active use to replicate vertex data to
         # per-corner data.
@@ -292,11 +296,12 @@ class Mesh:
 
         self.shader.setUniform('lineWidth',         self.lineWidth)
         
-        # Set SSAO uniforms (shader always supports SSAO, but we can disable it)
-        self.shader.setUniform('ssaoEnabled',   self.ssaoEnabled, optional=True)
-        self.shader.setUniform('ssaoRadius',    self.ssaoRadius, optional=True)
-        self.shader.setUniform('ssaoBias',      self.ssaoBias, optional=True)
-        self.shader.setUniform('ssaoSamples',   self.ssaoSamples, optional=True)
+        # Set SSAO uniforms only if using SSAO shader
+        if self.use_ssao:
+            self.shader.setUniform('ssaoEnabled',   self.ssaoEnabled)
+            self.shader.setUniform('ssaoRadius',    self.ssaoRadius)
+            self.shader.setUniform('ssaoBias',      self.ssaoBias)
+            self.shader.setUniform('ssaoSamples',   self.ssaoSamples)
 
         # Any constant color configured is not part of the VAO state and must be set again to ensure it hasn't been overwritten
         if self.constColor: self.vao.setConstantAttribute(2, self.color)
@@ -366,7 +371,7 @@ class MeshRenderer:
         (i.e., to use glDrawArrays instead of glDrawElements)
         """
         if len(self.meshes) == 0: 
-            self.meshes = [Mesh(self.ctx, V, F, N, color, use_ssao=self.ssaoEnabled)]
+            self.meshes = [Mesh(self.ctx, V, F, N, color, use_ssao=(self.ssaoEnabled > 0.5))]
         else: 
             self.meshes[which].setMesh(V, F, N, color)
 
@@ -377,7 +382,7 @@ class MeshRenderer:
         If use_ssao is None, uses the renderer's ssaoEnabled setting.
         """
         if use_ssao is None:
-            use_ssao = self.ssaoEnabled
+            use_ssao = (self.ssaoEnabled > 0.5)
         self.meshes.insert(0 if makeDefault else len(self.meshes), Mesh(self.ctx, V, F, N, color, use_ssao=use_ssao))
 
     def addVectorFieldMesh(self, V, F, N, arrowPos, arrowVec, arrowColor,
