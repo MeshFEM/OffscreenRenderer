@@ -128,10 +128,11 @@ class PlotVideoWriter(VideoWriter):
     """
     Creates an image sequence or a compressed video from  a MeshRenderer
     """
-    def __init__(self, outPath, fig, dpi = 72, codec=Codec.H264, framerate=30, streaming=False, outWidth=None, outHeight=None, quality=None):
+    def __init__(self, outPath, fig, dpi = 72, codec=Codec.H264, framerate=30, streaming=False, outWidth=None, outHeight=None, quality=None, tight_layout=True):
         fig.set_dpi(dpi)
         self.dpi = dpi
-        fig.tight_layout()
+        if tight_layout: fig.tight_layout()
+        self.tight_layout = tight_layout
         fig.canvas.draw()
         fig.canvas.buffer_rgba().tobytes()
         super().__init__(outPath, *fig.canvas.get_width_height(), codec=codec, framerate=framerate, streaming=streaming, outWidth=outWidth, outHeight=outHeight, quality=quality)
@@ -141,7 +142,7 @@ class PlotVideoWriter(VideoWriter):
         Render a new frame into the video.
         """
         fig.set_dpi(self.dpi)
-        fig.tight_layout()
+        if self.tight_layout: fig.tight_layout()
         if self.codec != Codec.ImgSeq:
             # FFmpeg doesn't support transparent H264/HEVC output, and using
             # a transparent plot background results in ugly plot labels.
